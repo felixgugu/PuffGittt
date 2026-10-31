@@ -61,6 +61,10 @@ export interface DiffDocument {
   truncated: boolean;
   hunks?: DiffHunk[];
   patchHash?: string;
+  image?: boolean;
+  imageMime?: string;
+  oldImage?: string;
+  newImage?: string;
 }
 
 export interface Commit {

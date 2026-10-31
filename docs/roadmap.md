@@ -78,7 +78,7 @@ recommended implementation order.
 | Embedded terminal | Yes | No | No | P3 |
 | Bisect | Yes | Partial | No | P3 |
 | Sparse checkout | Yes | Partial | No | P3 |
-| Image diff | Yes | Yes | No | P2 |
+| Image diff | Yes | Yes | Basic | P2 |
 | Signed commits | Yes | Partial | No | P2 |
 
 ## First wave
@@ -181,7 +181,7 @@ Rationale:
 3. Git LFS.
 4. Git Flow wizard.
 5. Provider integrations and pull requests.
-6. Image diff.
+6. Image diff: implemented for before/after previews; slider/overlay is not done.
 7. Custom actions.
 8. Terminal / ConPTY.
 9. Bisect and sparse checkout.

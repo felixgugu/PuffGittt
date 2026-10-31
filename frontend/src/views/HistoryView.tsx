@@ -36,6 +36,7 @@ import {
 import { CommitGraph } from "../components/CommitGraph";
 import { DiffEditor } from "../components/DiffEditor";
 import { FileDiffDialog } from "../components/FileDiffDialog";
+import { ImageDiff } from "../components/ImageDiff";
 import { fileStatusClass, fileStatusLabel, formatDate, shortOid } from "../lib/format";
 
 interface HistoryViewProps {
@@ -1021,6 +1022,12 @@ export function HistoryView({ tab }: HistoryViewProps) {
           diffContent={
             diff.isLoading ? (
               <div className="center-state"><Spinner label={t("common.loading")} /></div>
+            ) : diff.data?.image ? (
+              <ImageDiff
+                mime={diff.data.imageMime}
+                oldData={diff.data.oldImage}
+                newData={diff.data.newImage}
+              />
             ) : diff.data?.binary ? (
               <div className="center-state"><p>{t("changes.binary")}</p></div>
             ) : diff.data ? (

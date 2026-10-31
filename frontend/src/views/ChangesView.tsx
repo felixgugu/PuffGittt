@@ -22,6 +22,7 @@ import { ChangesFilesPanel } from "../components/ChangesFilesPanel";
 import { DiffEditor } from "../components/DiffEditor";
 import { HunkStagingPanel } from "../components/HunkStagingPanel";
 import { FileInsightsDialog } from "../components/FileInsightsDialog";
+import { ImageDiff } from "../components/ImageDiff";
 import { UnderlineInput, UnderlineTextarea } from "../components/FormControls";
 import { fileHasStaged, fileHasUnstaged } from "../lib/fileTree";
 import { changeCode, fileStatusClass, fileStatusLabel } from "../lib/format";
@@ -274,7 +275,7 @@ export function ChangesView({ tab }: ChangesViewProps) {
                 <span className="selected-path">{selectedFile.path}</span>
               </div>
             ) : null}
-            {selected && diffQuery.data && !diffQuery.data.binary ? (
+            {selected && diffQuery.data && !diffQuery.data.binary && !diffQuery.data.image ? (
               <HunkStagingPanel
                 key={`${selected.path}:${selectedSide}:${diffQuery.data.patchHash || ""}`}
                 hunks={diffQuery.data.hunks || []}
@@ -285,6 +286,12 @@ export function ChangesView({ tab }: ChangesViewProps) {
             ) : null}
             {diffQuery.isLoading ? (
               <div className="center-state"><Spinner label={t("common.loading")} /></div>
+            ) : diffQuery.data?.image ? (
+              <ImageDiff
+                mime={diffQuery.data.imageMime}
+                oldData={diffQuery.data.oldImage}
+                newData={diffQuery.data.newImage}
+              />
             ) : diffQuery.data?.binary ? (
               <div className="center-state"><DocumentText24Regular /><p>{t("changes.binary")}</p></div>
             ) : diffQuery.data ? (

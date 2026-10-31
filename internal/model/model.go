@@ -42,6 +42,10 @@ type DiffDocument struct {
 	Truncated bool       `json:"truncated"`
 	Hunks     []DiffHunk `json:"hunks"`
 	PatchHash string     `json:"patchHash,omitempty"`
+	Image     bool       `json:"image,omitempty"`
+	ImageMime string     `json:"imageMime,omitempty"`
+	OldImage  string     `json:"oldImage,omitempty"`
+	NewImage  string     `json:"newImage,omitempty"`
 }
 
 type DiffLine struct {

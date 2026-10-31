@@ -48,7 +48,8 @@ This file tracks the gap between the current PuffGittt build and
 - File History and Blame dialog from the diff toolbar.
 - Repository change monitor polling porcelain status every 1.5 seconds; emits
   `repo:changed` Wails events and refreshes open tabs automatically.
-- Binary detection and 2 MiB preview cap.
+- Binary detection, image diff for common raster/SVG formats, 2 MiB text cap and
+  8 MiB image cap.
 - Commit composer with subject, description, amend and per-commit identity override.
 - Commit message passed through stdin to `git commit -F -`.
 - In-process per-repository write lock.
@@ -160,7 +161,8 @@ This file tracks the gap between the current PuffGittt build and
 - Interactive rebase editor and todo manipulation.
 - Blame and per-file history screens are implemented as a dialog; no dedicated
   file-history workspace or blame range selection yet.
-- Image diff (before/after, slider, checkerboard).
+- Image diff (before/after, slider, checkerboard): before/after images are shown,
+  but there is no slider or overlay comparison.
 - Worktrees, submodules and Git LFS.
 - Embedded terminal / ConPTY.
 - Credential prompts and SSH host-key verification.

@@ -51,6 +51,7 @@ wails build
   open repositories refresh automatically after external edits or Git commands.
 - File History and Blame dialog from the Changes diff toolbar, with per-file
   commit history and line-by-line blame.
+- Image diff for common raster formats and SVG, with side-by-side old/new previews.
 - History: branch filter, commit search, virtualized commit list, SVG lane graph,
   resizable commit details/changed files, tree/flat changed-file modes, commit diff
   dialog, create branch/tag, copy OID, reset, revert, drop commit, cherry-pick
@@ -82,7 +83,7 @@ and [docs/roadmap.md](docs/roadmap.md) for the SmartGit / SourceTree benchmark a
 Highlights:
 
 - Background task queue, progress events, cancellation and operation locks beyond the in-process mutex.
-- Interactive rebase, blame, file history, image diff, worktrees, submodules and LFS.
+- Worktrees, submodules and Git LFS.
 - SSH host-key UI and credential prompts.
 - Tags push / remote tag management and signed tags.
 - Terminal/ConPTY, Git Flow, provider integrations and custom actions.

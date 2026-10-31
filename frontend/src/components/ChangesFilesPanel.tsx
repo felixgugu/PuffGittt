@@ -16,6 +16,7 @@ import { api } from "../bridge/api";
 import { DiffEditor } from "./DiffEditor";
 import { FileDiffDialog } from "./FileDiffDialog";
 import { HunkStagingPanel } from "./HunkStagingPanel";
+import { ImageDiff } from "./ImageDiff";
 import type { FileChange, HunkSelection } from "../types";
 import {
   allDirectoryPaths,
@@ -545,6 +546,12 @@ export function ChangesFilesPanel({
           diffContent={
             dialogDiff.isLoading ? (
               <div className="center-state"><Spinner label="載入中…" /></div>
+            ) : dialogDiff.data?.image ? (
+              <ImageDiff
+                mime={dialogDiff.data.imageMime}
+                oldData={dialogDiff.data.oldImage}
+                newData={dialogDiff.data.newImage}
+              />
             ) : dialogDiff.data?.binary ? (
               <div className="center-state"><p>此檔案是 binary，無法預覽文字差異。</p></div>
             ) : dialogDiff.data ? (

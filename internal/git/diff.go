@@ -3,6 +3,7 @@ package git
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
 	"os"
 	"path/filepath"
 	"strings"
@@ -11,6 +12,7 @@ import (
 )
 
 const maxTextBytes = 2 * 1024 * 1024
+const maxImageBytes = 8 * 1024 * 1024
 
 func (r *Runner) Diff(ctx context.Context, root, path, side, revision string) (model.DiffDocument, error) {
 	repo, err := r.Open(ctx, root)
@@ -22,6 +24,18 @@ func (r *Runner) Diff(ctx context.Context, root, path, side, revision string) (m
 		Path:     path,
 		Side:     side,
 		Language: languageForPath(path),
+	}
+
+	if mime := imageMimeForPath(path); mime != "" {
+		oldBytes, newBytes := r.imageBytes(ctx, repo.RootPath, path, side, revision)
+		if len(oldBytes) <= maxImageBytes && len(newBytes) <= maxImageBytes {
+			doc.Binary = true
+			doc.Image = true
+			doc.ImageMime = mime
+			doc.OldImage = base64.StdEncoding.EncodeToString(oldBytes)
+			doc.NewImage = base64.StdEncoding.EncodeToString(newBytes)
+			return doc, nil
+		}
 	}
 
 	var oldText, newText string
@@ -76,6 +90,51 @@ func (r *Runner) showBlob(ctx context.Context, root, spec string) string {
 		return ""
 	}
 	return out
+}
+
+func (r *Runner) showBlobBytes(ctx context.Context, root, spec string) []byte {
+	out, _, err := r.RunBytes(ctx, root, nil, "show", spec)
+	if err != nil {
+		return nil
+	}
+	return []byte(out)
+}
+
+func (r *Runner) imageBytes(ctx context.Context, root, path, side, revision string) ([]byte, []byte) {
+	switch side {
+	case "staged":
+		return r.showBlobBytes(ctx, root, "HEAD:"+path), r.showBlobBytes(ctx, root, ":"+path)
+	case "commit":
+		if strings.TrimSpace(revision) == "" {
+			return nil, nil
+		}
+		return r.showBlobBytes(ctx, root, revision+"^:"+path), r.showBlobBytes(ctx, root, revision+":"+path)
+	default:
+		oldBytes := r.showBlobBytes(ctx, root, ":"+path)
+		newBytes, _ := os.ReadFile(filepath.Join(root, filepath.FromSlash(path)))
+		return oldBytes, newBytes
+	}
+}
+
+func imageMimeForPath(path string) string {
+	switch strings.ToLower(filepath.Ext(path)) {
+	case ".png":
+		return "image/png"
+	case ".jpg", ".jpeg":
+		return "image/jpeg"
+	case ".gif":
+		return "image/gif"
+	case ".bmp":
+		return "image/bmp"
+	case ".webp":
+		return "image/webp"
+	case ".ico":
+		return "image/x-icon"
+	case ".svg":
+		return "image/svg+xml"
+	default:
+		return ""
+	}
 }
 
 func isBinaryText(data string) bool {
