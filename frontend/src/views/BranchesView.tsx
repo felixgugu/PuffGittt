@@ -9,6 +9,7 @@ import {
   Branch24Regular,
   Dismiss24Regular,
   History24Regular,
+  Settings24Regular,
 } from "@fluentui/react-icons";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
@@ -53,6 +54,10 @@ export function BranchesView({ tab }: BranchesViewProps) {
   const [renameValue, setRenameValue] = useState("");
   const [upstreamOpen, setUpstreamOpen] = useState(false);
   const [upstreamValue, setUpstreamValue] = useState("");
+  const [remotesOpen, setRemotesOpen] = useState(false);
+  const [editingRemote, setEditingRemote] = useState<string | null>(null);
+  const [remoteFormName, setRemoteFormName] = useState("");
+  const [remoteFormUrl, setRemoteFormUrl] = useState("");
 
   const branches = useQuery({ queryKey: ["branches", root], queryFn: () => api.repo.getBranches(root) });
   const remotes = useQuery({ queryKey: ["remotes", root], queryFn: () => api.sync.listRemotes(root) });
@@ -323,6 +328,43 @@ export function BranchesView({ tab }: BranchesViewProps) {
     );
   };
 
+  const openRemotes = () => {
+    setEditingRemote(null);
+    setRemoteFormName("");
+    setRemoteFormUrl("");
+    setRemotesOpen(true);
+  };
+
+  const startEditRemote = (entry: { name: string; fetchUrl: string; pushUrl: string }) => {
+    setEditingRemote(entry.name);
+    setRemoteFormName(entry.name);
+    setRemoteFormUrl(entry.pushUrl || entry.fetchUrl);
+  };
+
+  const resetRemoteForm = () => {
+    setEditingRemote(null);
+    setRemoteFormName("");
+    setRemoteFormUrl("");
+  };
+
+  const saveRemote = async () => {
+    const name = remoteFormName.trim();
+    const url = remoteFormUrl.trim();
+    if (!url || (!editingRemote && !name)) return;
+    const ok = await run("remote", () =>
+      editingRemote
+        ? api.sync.setRemoteUrl(root, editingRemote, url)
+        : api.sync.addRemote(root, name, url),
+    );
+    if (ok) resetRemoteForm();
+  };
+
+  const removeRemote = async (name: string) => {
+    if (!window.confirm(`確定要移除 Remote ${name}？`)) return;
+    const ok = await run("remote", () => api.sync.removeRemote(root, name));
+    if (ok && editingRemote === name) resetRemoteForm();
+  };
+
   const handleCreate = async () => {
     const name = newName.trim();
     if (!name) return;
@@ -508,7 +550,22 @@ export function BranchesView({ tab }: BranchesViewProps) {
           </div>
         </div>
         <div className="panel-card branch-section">
-          <div className="panel-heading"><span>{t("branches.remote")}</span><span className="muted">{remote.length}</span></div>
+          <div className="panel-heading">
+            <span>{t("branches.remote")}</span>
+            <div className="panel-heading-actions">
+              <span className="branch-icon-button" data-tooltip="管理 Remotes">
+                <Button
+                  size="small"
+                  appearance="subtle"
+                  aria-label="管理 Remotes"
+                  icon={<Settings24Regular />}
+                  onClick={openRemotes}
+                  disabled={!!busy}
+                />
+              </span>
+              <span className="muted">{remote.length}</span>
+            </div>
+          </div>
           <div className="branch-list">
             {remote.map((branch) => renderBranch(branch, false))}
             {remote.length === 0 ? <div className="empty-state">{t("branches.noBranches")}</div> : null}
@@ -694,6 +751,70 @@ export function BranchesView({ tab }: BranchesViewProps) {
               </Button>
               <Button appearance="primary" onClick={submitUpstream} disabled={!!busy || !upstreamValue.trim()}>
                 設定
+              </Button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {remotesOpen ? (
+        <div
+          className="modal-backdrop"
+          onMouseDown={(event) => event.target === event.currentTarget && !busy && setRemotesOpen(false)}
+        >
+          <div className="modal small" role="dialog" aria-modal="true" aria-label="Remotes">
+            <div className="modal-header">
+              <h2>Remotes</h2>
+              <Button appearance="subtle" icon={<Dismiss24Regular />} onClick={() => setRemotesOpen(false)} disabled={!!busy} />
+            </div>
+            <div className="modal-body form-stack">
+              <div className="remote-list">
+                {(remotes.data || []).map((entry) => (
+                  <div className="remote-row" key={entry.name}>
+                    <div className="remote-copy">
+                      <strong>{entry.name}</strong>
+                      <span title={entry.pushUrl || entry.fetchUrl}>{entry.fetchUrl}</span>
+                    </div>
+                    <Button size="small" appearance="subtle" onClick={() => startEditRemote(entry)} disabled={!!busy}>
+                      編輯
+                    </Button>
+                    <Button size="small" appearance="subtle" onClick={() => void removeRemote(entry.name)} disabled={!!busy}>
+                      刪除
+                    </Button>
+                  </div>
+                ))}
+                {(remotes.data || []).length === 0 ? <div className="empty-state">尚未設定 Remote</div> : null}
+              </div>
+              <Field label={editingRemote ? `編輯 Remote ${editingRemote}` : "新增 Remote"}>
+                <UnderlineInput
+                  value={remoteFormName}
+                  onChange={(_, data) => setRemoteFormName(data.value)}
+                  placeholder="origin"
+                  disabled={!!editingRemote}
+                />
+              </Field>
+              <Field label="URL">
+                <UnderlineInput
+                  value={remoteFormUrl}
+                  onChange={(_, data) => setRemoteFormUrl(data.value)}
+                  placeholder="https://github.com/owner/repo.git"
+                />
+              </Field>
+            </div>
+            <div className="modal-footer">
+              <Button
+                appearance="secondary"
+                onClick={() => (editingRemote ? resetRemoteForm() : setRemotesOpen(false))}
+                disabled={!!busy}
+              >
+                {editingRemote ? "取消編輯" : "關閉"}
+              </Button>
+              <Button
+                appearance="primary"
+                onClick={() => void saveRemote()}
+                disabled={!!busy || !remoteFormUrl.trim() || (!editingRemote && !remoteFormName.trim())}
+              >
+                {busy === "remote" ? <Spinner size="tiny" /> : editingRemote ? "儲存 URL" : "新增 Remote"}
               </Button>
             </div>
           </div>

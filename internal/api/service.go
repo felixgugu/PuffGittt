@@ -538,6 +538,27 @@ func (a *SyncAPI) DeleteRemoteBranch(root, remote, branch string) (model.Operati
 	return a.s.runnerWithSettings().DeleteRemoteBranch(a.s.context(), root, remote, branch)
 }
 
+func (a *SyncAPI) AddRemote(root, name, url string) (model.OperationResult, error) {
+	mu := a.s.repoLock(root)
+	mu.Lock()
+	defer mu.Unlock()
+	return a.s.runnerWithSettings().AddRemote(a.s.context(), root, name, url)
+}
+
+func (a *SyncAPI) SetRemoteURL(root, name, url string) (model.OperationResult, error) {
+	mu := a.s.repoLock(root)
+	mu.Lock()
+	defer mu.Unlock()
+	return a.s.runnerWithSettings().SetRemoteURL(a.s.context(), root, name, url)
+}
+
+func (a *SyncAPI) RemoveRemote(root, name string) (model.OperationResult, error) {
+	mu := a.s.repoLock(root)
+	mu.Lock()
+	defer mu.Unlock()
+	return a.s.runnerWithSettings().RemoveRemote(a.s.context(), root, name)
+}
+
 func (a *SyncAPI) Preview(root string, req model.CommandRequest) (model.CommandPreview, error) {
 	return a.s.runnerWithSettings().PreviewSyncCommand(a.s.context(), root, req)
 }

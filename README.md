@@ -58,6 +58,7 @@ wails build
   set upstream, publish, checkout remote branch and delete remote branch through
   right-click context menus, with merge/rebase direction labels and Git command
   confirmation dialogs.
+- Remote management: add remotes, edit fetch/push URLs and remove remotes.
 - Sync: fetch, pull, push, force-with-lease push, with Git command previews and
   branch ahead/behind status.
 - Conflicts: conflict list, three-way content, editable result, mark resolved,
@@ -80,7 +81,7 @@ Highlights:
 
 - Background task queue, progress events, cancellation and operation locks beyond the in-process mutex.
 - Interactive rebase, blame, file history, image diff, worktrees, submodules and LFS.
-- Remote configuration UI, SSH host-key UI and credential prompts.
+- SSH host-key UI and credential prompts.
 - Tags push / remote tag management and signed tags.
 - Terminal/ConPTY, Git Flow, provider integrations and custom actions.
 - Draft persistence, backup retention, diagnostics export, installer, code signing and updater.

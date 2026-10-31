@@ -64,7 +64,7 @@ recommended implementation order.
 | File history | Yes | Yes | No | P1 |
 | Blame | Yes | Yes | No | P1 |
 | Branch compare | Yes | Yes | No | P1 |
-| Remote management UI | Yes | Yes | No | P1 |
+| Remote management UI | Yes | Yes | Yes | P1 |
 | Force-with-lease push | Yes | Yes | Yes | P1 |
 | Credential / SSH UI | Yes | Yes | No | P1 |
 | Hunk-level conflict resolution | Yes | Yes | Partial | P1 |
@@ -159,7 +159,7 @@ Rationale:
 
 ## Second wave
 
-1. Remote management: add/edit/delete remotes, default remote, fetch/push URLs.
+1. Remote management: implemented (add/edit/delete, fetch/push URLs).
 2. Branch lifecycle: implemented (rename, set upstream, publish, checkout remote branch,
    delete remote branch).
 3. Force-with-lease push: implemented.

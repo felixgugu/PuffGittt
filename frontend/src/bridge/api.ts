@@ -147,6 +147,12 @@ export const api = {
       invoke<OperationResult>("SyncAPI", "Publish", root, remote, branch),
     deleteRemoteBranch: (root: string, remote: string, branch: string) =>
       invoke<OperationResult>("SyncAPI", "DeleteRemoteBranch", root, remote, branch),
+    addRemote: (root: string, name: string, url: string) =>
+      invoke<OperationResult>("SyncAPI", "AddRemote", root, name, url),
+    setRemoteUrl: (root: string, name: string, url: string) =>
+      invoke<OperationResult>("SyncAPI", "SetRemoteURL", root, name, url),
+    removeRemote: (root: string, name: string) =>
+      invoke<OperationResult>("SyncAPI", "RemoveRemote", root, name),
     preview: (root: string, request: CommandRequest) =>
       invoke<CommandPreview>("SyncAPI", "Preview", root, request),
   },

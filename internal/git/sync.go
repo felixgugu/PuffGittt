@@ -2,6 +2,7 @@ package git
 
 import (
 	"context"
+	"fmt"
 	"strings"
 
 	"github.com/felixgugu/puffgittt/internal/model"
@@ -145,6 +146,55 @@ func (r *Runner) PublishBranch(ctx context.Context, root, remote, branch string)
 		return model.OperationResult{Success: false, Message: "Publish failed", Output: strings.TrimSpace(out + "\n" + errOut)}, r.OutputError(out, errOut, err)
 	}
 	return model.OperationResult{Success: true, Message: "Branch published", Output: strings.TrimSpace(out + "\n" + errOut)}, nil
+}
+
+func (r *Runner) AddRemote(ctx context.Context, root, name, url string) (model.OperationResult, error) {
+	repo, err := r.Open(ctx, root)
+	if err != nil {
+		return model.OperationResult{}, err
+	}
+	name = strings.TrimSpace(name)
+	url = strings.TrimSpace(url)
+	if name == "" || url == "" {
+		return model.OperationResult{}, fmt.Errorf("remote name and URL are required")
+	}
+	out, errOut, err := r.RunBytes(ctx, repo.RootPath, nil, "remote", "add", name, url)
+	if err != nil {
+		return model.OperationResult{}, r.OutputError(out, errOut, err)
+	}
+	return model.OperationResult{Success: true, Message: "Remote added", Output: strings.TrimSpace(out)}, nil
+}
+
+func (r *Runner) SetRemoteURL(ctx context.Context, root, name, url string) (model.OperationResult, error) {
+	repo, err := r.Open(ctx, root)
+	if err != nil {
+		return model.OperationResult{}, err
+	}
+	name = strings.TrimSpace(name)
+	url = strings.TrimSpace(url)
+	if name == "" || url == "" {
+		return model.OperationResult{}, fmt.Errorf("remote name and URL are required")
+	}
+	out, errOut, err := r.RunBytes(ctx, repo.RootPath, nil, "remote", "set-url", name, url)
+	if err != nil {
+		return model.OperationResult{}, r.OutputError(out, errOut, err)
+	}
+	return model.OperationResult{Success: true, Message: "Remote URL updated", Output: strings.TrimSpace(out)}, nil
+}
+
+func (r *Runner) RemoveRemote(ctx context.Context, root, name string) (model.OperationResult, error) {
+	repo, err := r.Open(ctx, root)
+	if err != nil {
+		return model.OperationResult{}, err
+	}
+	if strings.TrimSpace(name) == "" {
+		return model.OperationResult{}, fmt.Errorf("remote name is required")
+	}
+	out, errOut, err := r.RunBytes(ctx, repo.RootPath, nil, "remote", "remove", name)
+	if err != nil {
+		return model.OperationResult{}, r.OutputError(out, errOut, err)
+	}
+	return model.OperationResult{Success: true, Message: "Remote removed", Output: strings.TrimSpace(out)}, nil
 }
 
 func (r *Runner) DeleteRemoteBranch(ctx context.Context, root, remote, branch string) (model.OperationResult, error) {

@@ -350,6 +350,9 @@ export async function mockInvoke<T>(group: string, method: string, args: any[]):
     case "SyncAPI.Push":
     case "SyncAPI.Publish":
     case "SyncAPI.DeleteRemoteBranch":
+    case "SyncAPI.AddRemote":
+    case "SyncAPI.SetRemoteURL":
+    case "SyncAPI.RemoveRemote":
       return ok("Synchronized") as T;
     case "SyncAPI.Preview": {
       const request = args[1] as CommandRequest;

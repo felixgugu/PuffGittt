@@ -78,6 +78,7 @@ This file tracks the gap between the current PuffGittt build and
 - Right-click local branch context menu for switch, merge, rebase, rename, upstream,
   publish, force push and delete.
 - Right-click remote branch context menu for checkout and remote deletion.
+- Remote management: add, edit URL and remove remotes.
 - Fetch, pull (merge/rebase/ff-only strategy API) and push with command previews.
 - Force-with-lease push.
 - Ahead/behind status.
@@ -121,7 +122,8 @@ This file tracks the gap between the current PuffGittt build and
   snapshot implementation described in the spec.
 - **Search**: commit subject search only; author/SHA/path search not complete.
 - **Tags**: local list/create/delete only; no push, remote tag management or signed tags.
-- **Remotes**: list API exists; no remote add/edit/delete UI.
+- **Remotes**: remote add/edit/delete UI exists; credential prompts and SSH host-key
+  verification are still missing.
 - **Settings identity**: used for commits via `git -c`, not written to repo config.
 - **Refresh**: repository change monitor polls porcelain status every 1.5 seconds;
   there is no fsnotify watcher or per-directory event stream yet.
@@ -153,7 +155,7 @@ This file tracks the gap between the current PuffGittt build and
 - Image diff (before/after, slider, checkerboard).
 - Worktrees, submodules and Git LFS.
 - Embedded terminal / ConPTY.
-- Remote repository management UI, credentials and host-key verification.
+- Credential prompts and SSH host-key verification.
 - Draft persistence and commit/form restoration.
 - Backup retention and restore UI.
 - High-contrast theme.
