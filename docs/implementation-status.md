@@ -66,6 +66,7 @@ This file tracks the gap between the current PuffGittt build and
 - Reset Soft / Mixed / Hard, revert (non-merge) and drop commit (non-root,
   non-merge, current branch) with Git command previews.
 - Cherry-pick any commit, with mainline parent selection for merge commits.
+- Interactive rebase from a commit with pick / squash / fixup / drop actions.
 - Commits / Reflog mode switch in the History page, with reflog entry details.
 - Reflog right-click menu: create branch/tag, copy OID and reset.
 - Undo last operation for reset, revert, drop, merge and rebase, guarded by a

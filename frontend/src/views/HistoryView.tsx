@@ -26,7 +26,7 @@ import { UnderlineInput, UnderlineSelect, UnderlineTextarea } from "../component
 import { ContextMenu } from "../components/ContextMenu";
 import { GitCommandDialog } from "../components/GitCommandDialog";
 import { useAppStore, type RepoTab } from "../store";
-import type { CommandPreview, CommandRequest, Commit, CommitFile, OperationResult } from "../types";
+import type { CommandPreview, CommandRequest, Commit, CommitFile, OperationResult, RebaseTodo } from "../types";
 import { buildGraph } from "../lib/graph";
 import {
   allCommitDirectoryPaths,
@@ -89,6 +89,8 @@ export function HistoryView({ tab }: HistoryViewProps) {
   const [resetDialogOpen, setResetDialogOpen] = useState(false);
   const [cherryDialogOpen, setCherryDialogOpen] = useState(false);
   const [cherryMainline, setCherryMainline] = useState("1");
+  const [rebaseBase, setRebaseBase] = useState<string | null>(null);
+  const [rebaseTodos, setRebaseTodos] = useState<RebaseTodo[]>([]);
   const [resetMode, setResetMode] = useState<"soft" | "mixed" | "hard">("mixed");
   const [actionBusy, setActionBusy] = useState(false);
   const [pendingAction, setPendingAction] = useState<PendingCommitAction | null>(null);
@@ -367,6 +369,37 @@ export function HistoryView({ tab }: HistoryViewProps) {
     if (!actionCommit) return;
     const ok = await runCommitAction(() => api.history.cherryPick(root, actionCommit.oid, cherryMainline));
     if (ok) setCherryDialogOpen(false);
+  };
+
+  const openInteractiveRebase = async (commit: Commit) => {
+    if (actionBusy) return;
+    setActionBusy(true);
+    try {
+      const plan = await api.history.rebasePlan(root, commit.oid);
+      if (plan.length === 0) {
+        setStatusMessage("此 Commit 之後沒有可 rebase 的 Commit。");
+        return;
+      }
+      setRebaseBase(commit.oid);
+      setRebaseTodos(plan);
+    } catch (error: any) {
+      setStatusMessage(error?.message || String(error));
+    } finally {
+      setActionBusy(false);
+    }
+  };
+
+  const updateRebaseAction = (index: number, action: string) => {
+    setRebaseTodos((current) => current.map((todo, todoIndex) => (todoIndex === index ? { ...todo, action } : todo)));
+  };
+
+  const confirmInteractiveRebase = async () => {
+    if (!rebaseBase) return;
+    const ok = await runCommitAction(() => api.history.interactiveRebase(root, rebaseBase, rebaseTodos));
+    if (ok) {
+      setRebaseBase(null);
+      setRebaseTodos([]);
+    }
   };
 
   const confirmPendingAction = async () => {
@@ -856,6 +889,61 @@ export function HistoryView({ tab }: HistoryViewProps) {
         </div>
       ) : null}
 
+      {rebaseBase && rebaseTodos.length > 0 ? (
+        <div
+          className="modal-backdrop"
+          onMouseDown={(event) => event.target === event.currentTarget && !actionBusy && setRebaseBase(null)}
+        >
+          <div className="modal rebase-modal" role="dialog" aria-modal="true" aria-label="Interactive Rebase">
+            <div className="modal-header">
+              <h2>Interactive Rebase</h2>
+              <Button
+                appearance="subtle"
+                icon={<Dismiss24Regular />}
+                onClick={() => setRebaseBase(null)}
+                disabled={actionBusy}
+              />
+            </div>
+            <div className="modal-body form-stack">
+              <p className="muted">
+                基底 {shortOid(rebaseBase)}，將重新套用 {rebaseTodos.length} 個 Commit。
+              </p>
+              <pre className="git-command-preview"><code>{`git rebase -i ${shortOid(rebaseBase)}`}</code></pre>
+              <div className="rebase-list">
+                {rebaseTodos.map((todo, index) => (
+                  <div className="rebase-row" key={todo.oid}>
+                    <span className="rebase-index">{index + 1}</span>
+                    <UnderlineSelect
+                      className="rebase-action"
+                      value={todo.action}
+                      onChange={(_, data) => updateRebaseAction(index, data.value)}
+                    >
+                      <option value="pick">pick</option>
+                      <option value="squash">squash</option>
+                      <option value="fixup">fixup</option>
+                      <option value="drop">drop</option>
+                    </UnderlineSelect>
+                    <code>{shortOid(todo.oid)}</code>
+                    <span className="rebase-subject" title={todo.subject}>{todo.subject}</span>
+                  </div>
+                ))}
+              </div>
+              <p className="git-command-warning destructive">
+                Rebase 會改寫目前分支歷史；若已 push 過可能需要 force push。第一個保留的 Commit 必須是 pick。
+              </p>
+            </div>
+            <div className="modal-footer">
+              <Button appearance="secondary" onClick={() => setRebaseBase(null)} disabled={actionBusy}>
+                取消
+              </Button>
+              <Button appearance="primary" onClick={() => void confirmInteractiveRebase()} disabled={actionBusy}>
+                {actionBusy ? <Spinner size="tiny" /> : "開始 Rebase"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
       {undoDialogOpen && undoInfo.data?.beforeOid ? (
         <GitCommandDialog
           title="復原上一次操作"
@@ -983,6 +1071,13 @@ export function HistoryView({ tab }: HistoryViewProps) {
                   warning: "Cherry-pick 可能產生衝突，衝突後需到 Conflicts 頁面處理。",
                 });
               },
+            },
+            {
+              key: "rebase",
+              label: "Interactive Rebase 從此 Commit 之後…",
+              disabled: actionBusy,
+              destructive: true,
+              onSelect: () => void openInteractiveRebase(contextCommit),
             },
             {
               key: "reset",

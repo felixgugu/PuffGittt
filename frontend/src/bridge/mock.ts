@@ -15,6 +15,7 @@ import type {
   RecentRepo,
   ReflogEntry,
   Repository,
+  RebaseTodo,
   Settings,
   StashEntry,
   Status,
@@ -315,6 +316,14 @@ export async function mockInvoke<T>(group: string, method: string, args: any[]):
         summary: commits[index % commits.length]?.subject || "demo",
         text: `demo line ${index + 1}`,
       })) as BlameLine[] as T;
+    case "HistoryAPI.RebasePlan":
+      return commits.slice(0, 5).map((commit) => ({
+        oid: commit.oid,
+        action: "pick",
+        subject: commit.subject,
+      })) as RebaseTodo[] as T;
+    case "HistoryAPI.InteractiveRebase":
+      return ok("Interactive rebase complete") as T;
     case "HistoryAPI.Reflog":
       return commits.slice(0, 6).map((commit, index) => ({
         selector: `HEAD@{${index}}`,

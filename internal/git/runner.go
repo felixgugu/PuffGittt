@@ -75,7 +75,14 @@ func (r *Runner) RunInput(ctx context.Context, dir string, input []byte, args ..
 }
 
 func (r *Runner) RunBytes(ctx context.Context, dir string, input []byte, args ...string) (string, string, error) {
+	return r.RunBytesEnv(ctx, dir, input, nil, args...)
+}
+
+func (r *Runner) RunBytesEnv(ctx context.Context, dir string, input []byte, env []string, args ...string) (string, string, error) {
 	cmd := r.command(ctx, dir, args...)
+	if len(env) > 0 {
+		cmd.Env = append(cmd.Env, env...)
+	}
 	if input != nil {
 		cmd.Stdin = bytes.NewReader(input)
 	}

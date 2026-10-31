@@ -108,6 +108,12 @@ export interface BlameLine {
   text: string;
 }
 
+export interface RebaseTodo {
+  oid: string;
+  action: string;
+  subject: string;
+}
+
 export interface CommitDetail {
   commit: Commit;
   files: CommitFile[];

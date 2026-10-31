@@ -406,6 +406,22 @@ func (a *HistoryAPI) Blame(root, path string) ([]model.BlameLine, error) {
 	return a.s.runnerWithSettings().Blame(a.s.context(), root, path)
 }
 
+func (a *HistoryAPI) RebasePlan(root, base string) ([]model.RebaseTodo, error) {
+	return a.s.runnerWithSettings().RebasePlan(a.s.context(), root, base)
+}
+
+func (a *HistoryAPI) InteractiveRebase(root, base string, todos []model.RebaseTodo) (model.OperationResult, error) {
+	mu := a.s.repoLock(root)
+	mu.Lock()
+	defer mu.Unlock()
+	before := a.s.headOid(root)
+	result, err := a.s.runnerWithSettings().InteractiveRebase(a.s.context(), root, base, todos)
+	if err == nil {
+		a.s.recordUndo(root, "Interactive rebase", before)
+	}
+	return result, err
+}
+
 func (a *HistoryAPI) CherryPick(root, oid, mainline string) (model.OperationResult, error) {
 	mu := a.s.repoLock(root)
 	mu.Lock()

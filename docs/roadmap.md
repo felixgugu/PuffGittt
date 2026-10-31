@@ -59,7 +59,7 @@ recommended implementation order.
 | File watcher | Yes | Yes | Polling | P0 |
 | Background tasks / cancellation | Yes | Yes | No | P0 |
 | Reflog / Undo | Yes | Partial | Basic | P0 |
-| Interactive rebase | Yes | Yes | No | P1 |
+| Interactive rebase | Yes | Yes | Basic | P1 |
 | Cherry-pick | Yes | Yes | Yes | P1 |
 | File history | Yes | Yes | Yes | P1 |
 | Blame | Yes | Yes | Yes | P1 |
@@ -168,7 +168,8 @@ Rationale:
 
 ## Third wave
 
-1. Interactive rebase with todo editor and conflict Continue/Skip/Abort.
+1. Interactive rebase: implemented for pick / squash / fixup / drop. Reordering,
+   reword and conflict Skip remain.
 2. Conflict editor improvements: ours/theirs/both, hunk-level resolution.
 4. Stash diff preview and partial apply.
 5. Tag push, remote tags and signed tags.

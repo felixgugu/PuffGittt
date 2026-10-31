@@ -1441,6 +1441,57 @@ svg {
   text-overflow: ellipsis;
 }
 
+.rebase-modal {
+  width: min(760px, 94vw);
+}
+
+.rebase-list {
+  display: flex;
+  flex-direction: column;
+  max-height: 46vh;
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+
+.rebase-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 8px;
+  border-bottom: 1px solid var(--border);
+  font-size: var(--font-size-secondary);
+}
+
+.rebase-row:last-child {
+  border-bottom: 0;
+}
+
+.rebase-index {
+  flex: 0 0 20px;
+  text-align: right;
+  color: var(--text-tertiary);
+}
+
+.rebase-action.form-control {
+  flex: 0 0 96px;
+  width: 96px;
+}
+
+.rebase-row code {
+  flex: 0 0 auto;
+  font-family: var(--font-mono);
+  color: var(--text-secondary);
+}
+
+.rebase-subject {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .selected-file-summary {
   display: flex;
   align-items: center;

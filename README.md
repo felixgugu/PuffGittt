@@ -53,9 +53,9 @@ wails build
   commit history and line-by-line blame.
 - History: branch filter, commit search, virtualized commit list, SVG lane graph,
   resizable commit details/changed files, tree/flat changed-file modes, commit diff
-  dialog, create branch/tag, copy OID, reset, revert, drop commit and cherry-pick
-  (including merge mainline selection), all through a right-click context menu
-  with Git command previews.
+  dialog, create branch/tag, copy OID, reset, revert, drop commit, cherry-pick
+  (including merge mainline selection) and interactive rebase, all through a
+  right-click context menu with Git command previews.
 - Branches: local and remote lists, create, switch, merge, rebase, rename, delete,
   set upstream, publish, checkout remote branch, delete remote branch and branch
   comparison through right-click context menus, with merge/rebase direction labels

@@ -18,6 +18,7 @@ import type {
   ReflogEntry,
   Remote,
   Repository,
+  RebaseTodo,
   Settings,
   StashEntry,
   Status,
@@ -118,6 +119,10 @@ export const api = {
     fileHistory: (root: string, path: string, limit: number) =>
       invoke<CompareCommit[]>("HistoryAPI", "FileHistory", root, path, limit),
     blame: (root: string, path: string) => invoke<BlameLine[]>("HistoryAPI", "Blame", root, path),
+    rebasePlan: (root: string, base: string) =>
+      invoke<RebaseTodo[]>("HistoryAPI", "RebasePlan", root, base),
+    interactiveRebase: (root: string, base: string, todos: RebaseTodo[]) =>
+      invoke<OperationResult>("HistoryAPI", "InteractiveRebase", root, base, todos),
     reflog: (root: string, limit: number) =>
       invoke<ReflogEntry[]>("HistoryAPI", "Reflog", root, limit),
     undoInfo: (root: string) => invoke<UndoRecord>("HistoryAPI", "UndoInfo", root),

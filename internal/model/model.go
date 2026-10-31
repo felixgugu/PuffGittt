@@ -111,6 +111,12 @@ type BlameLine struct {
 	Text    string `json:"text"`
 }
 
+type RebaseTodo struct {
+	Oid     string `json:"oid"`
+	Action  string `json:"action"`
+	Subject string `json:"subject"`
+}
+
 type CommitDetail struct {
 	Commit Commit       `json:"commit"`
 	Files  []CommitFile `json:"files"`
