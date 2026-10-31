@@ -162,7 +162,8 @@ This file tracks the gap between the current PuffGittt build and
   gutter actions.
 - Automatic backup retention and multi-step undo history.
 - Reflog selectors for refs other than HEAD and cross-ref reflog browsing.
-- Interactive rebase editor and todo manipulation.
+- Interactive rebase supports pick / squash / fixup / drop in the existing order;
+  there is no drag reordering, reword or conflict Skip action.
 - Blame and per-file history screens are implemented as a dialog; no dedicated
   file-history workspace or blame range selection yet.
 - Image diff (before/after, slider, checkerboard): before/after images are shown,

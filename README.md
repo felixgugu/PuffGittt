@@ -86,10 +86,11 @@ and [docs/roadmap.md](docs/roadmap.md) for the SmartGit / SourceTree benchmark a
 Highlights:
 
 - Background task queue, progress events, cancellation and operation locks beyond the in-process mutex.
-- Worktrees, submodules and Git LFS.
+- Git LFS.
 - SSH host-key UI and credential prompts.
-- Tags push / remote tag management and signed tags.
+- Remote tag management and signed tags.
 - Terminal/ConPTY, Git Flow, provider integrations and custom actions.
+- High-contrast theme.
 - Backup retention, diagnostics export, installer, code signing and updater.
 
 ## Project layout
