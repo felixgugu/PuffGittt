@@ -15,7 +15,7 @@ import { useTranslation } from "react-i18next";
 import { api } from "../bridge/api";
 import { ContextMenu } from "../components/ContextMenu";
 import { GitCommandDialog } from "../components/GitCommandDialog";
-import { UnderlineInput } from "../components/FormControls";
+import { UnderlineInput, UnderlineSelect } from "../components/FormControls";
 import { useAppStore, type RepoTab } from "../store";
 import type { Branch, CommandPreview, CommandRequest, OperationResult } from "../types";
 import { formatDate, shortOid } from "../lib/format";
@@ -48,6 +48,11 @@ export function BranchesView({ tab }: BranchesViewProps) {
   const [startOid, setStartOid] = useState(tab.repo.headOid || "");
   const [pendingCommand, setPendingCommand] = useState<PendingCommand | null>(null);
   const [branchMenu, setBranchMenu] = useState<{ x: number; y: number; branch: Branch } | null>(null);
+  const [editBranch, setEditBranch] = useState<Branch | null>(null);
+  const [renameOpen, setRenameOpen] = useState(false);
+  const [renameValue, setRenameValue] = useState("");
+  const [upstreamOpen, setUpstreamOpen] = useState(false);
+  const [upstreamValue, setUpstreamValue] = useState("");
 
   const branches = useQuery({ queryKey: ["branches", root], queryFn: () => api.repo.getBranches(root) });
   const remotes = useQuery({ queryKey: ["remotes", root], queryFn: () => api.sync.listRemotes(root) });
@@ -102,6 +107,12 @@ export function BranchesView({ tab }: BranchesViewProps) {
           return api.branch.delete(root, req.name || "", !!req.force);
         case "create":
           return api.branch.create(root, req.name || "", req.startPoint || "");
+        case "rename":
+          return api.branch.rename(root, req.source || "", req.name || "");
+        case "set-upstream":
+          return api.branch.setUpstream(root, req.name || "", req.target || "");
+        case "checkout-remote":
+          return api.branch.checkoutRemote(root, req.name || "", req.source || "");
         default:
           return Promise.reject(new Error(`不支援的分支操作：${req.action}`));
       }
@@ -112,7 +123,11 @@ export function BranchesView({ tab }: BranchesViewProps) {
       case "pull":
         return api.sync.pull(root, req.remote || "", req.branch || "", req.strategy || "merge");
       case "push":
-        return api.sync.push(root, req.remote || "", req.branch || "");
+        return api.sync.push(root, req.remote || "", req.branch || "", !!req.force);
+      case "publish":
+        return api.sync.publish(root, req.remote || "", req.branch || "");
+      case "delete-remote":
+        return api.sync.deleteRemoteBranch(root, req.remote || "", req.branch || "");
       default:
         return Promise.reject(new Error(`不支援的同步操作：${req.action}`));
     }
@@ -202,6 +217,112 @@ export function BranchesView({ tab }: BranchesViewProps) {
     );
   };
 
+  const openRename = (branch: Branch) => {
+    setEditBranch(branch);
+    setRenameValue(branch.name);
+    setRenameOpen(true);
+  };
+
+  const submitRename = () => {
+    const branch = editBranch;
+    const name = renameValue.trim();
+    if (!branch || !name || name === branch.name) {
+      setRenameOpen(false);
+      return;
+    }
+    setRenameOpen(false);
+    void previewCommand(
+      "branch",
+      { action: "rename", source: branch.name, name },
+      {
+        title: `重新命名分支 ${branch.name}`,
+        description: `將本機分支 ${branch.name} 重新命名為 ${name}。`,
+        onSuccess: () => setSelectedName(name),
+      },
+    );
+  };
+
+  const openUpstream = (branch: Branch) => {
+    setEditBranch(branch);
+    setUpstreamValue(branch.upstream || remote[0]?.name || "");
+    setUpstreamOpen(true);
+  };
+
+  const submitUpstream = () => {
+    const branch = editBranch;
+    if (!branch || !upstreamValue.trim()) {
+      setUpstreamOpen(false);
+      return;
+    }
+    setUpstreamOpen(false);
+    void previewCommand(
+      "branch",
+      { action: "set-upstream", name: branch.name, target: upstreamValue.trim() },
+      {
+        title: `設定 ${branch.name} 的 upstream`,
+        description: `將 ${branch.name} 的上游設定為 ${upstreamValue.trim()}。`,
+      },
+    );
+  };
+
+  const requestPublish = (branch: Branch) => {
+    if (!remoteName || busy) return;
+    void previewCommand(
+      "sync",
+      { action: "publish", remote: remoteName, branch: branch.name },
+      {
+        title: `Publish ${branch.name} 到 ${remoteName}`,
+        description: `推送 ${branch.name} 並建立 upstream 追蹤關係。`,
+        warning: "會在遠端建立同名分支。",
+      },
+    );
+  };
+
+  const requestForcePush = (branch: Branch) => {
+    if (!remoteName || busy) return;
+    void previewCommand(
+      "sync",
+      { action: "push", remote: remoteName, branch: branch.name, force: true },
+      {
+        title: `Force push ${branch.name} 到 ${remoteName}`,
+        description: `使用 --force-with-lease 覆寫遠端 ${remoteName}/${branch.name}。`,
+        warning: "會改寫遠端歷史；若遠端在你 fetch 後已有更新，操作會被拒絕。",
+        destructive: true,
+      },
+    );
+  };
+
+  const requestCheckoutRemote = (branch: Branch) => {
+    const localName = branch.name.split("/").slice(1).join("/");
+    if (!localName || busy) return;
+    void previewCommand(
+      "branch",
+      { action: "checkout-remote", source: branch.name, name: localName },
+      {
+        title: `Checkout ${branch.name}`,
+        description: `建立本機分支 ${localName} 並追蹤 ${branch.name}。`,
+        onSuccess: () => setSelectedName(localName),
+      },
+    );
+  };
+
+  const requestDeleteRemote = (branch: Branch) => {
+    const parts = branch.name.split("/");
+    const remotePart = parts[0];
+    const branchPart = parts.slice(1).join("/");
+    if (!remotePart || !branchPart || busy) return;
+    void previewCommand(
+      "sync",
+      { action: "delete-remote", remote: remotePart, branch: branchPart },
+      {
+        title: `刪除遠端分支 ${branch.name}`,
+        description: `從遠端 ${remotePart} 刪除分支 ${branchPart}。`,
+        warning: "此操作會影響其他協作者，且無法復原。",
+        destructive: true,
+      },
+    );
+  };
+
   const handleCreate = async () => {
     const name = newName.trim();
     if (!name) return;
@@ -276,15 +397,11 @@ export function BranchesView({ tab }: BranchesViewProps) {
         tabIndex={selectable ? 0 : undefined}
         aria-pressed={selectable ? isSelected : undefined}
         onClick={selectable ? () => setSelectedName(branch.name) : undefined}
-        onContextMenu={
-          selectable
-            ? (event) => {
-                event.preventDefault();
-                setSelectedName(branch.name);
-                setBranchMenu({ x: event.clientX, y: event.clientY, branch });
-              }
-            : undefined
-        }
+        onContextMenu={(event) => {
+          event.preventDefault();
+          if (selectable) setSelectedName(branch.name);
+          setBranchMenu({ x: event.clientX, y: event.clientY, branch });
+        }}
         onKeyDown={
           selectable
             ? (event) => {
@@ -428,36 +545,161 @@ export function BranchesView({ tab }: BranchesViewProps) {
           x={branchMenu.x}
           y={branchMenu.y}
           onClose={() => setBranchMenu(null)}
-          items={[
-            {
-              key: "switch",
-              label: `切換到 ${branchMenu.branch.name}`,
-              disabled: branchMenu.branch.current || !!busy,
-              onSelect: () => requestSwitch(branchMenu.branch),
-            },
-            {
-              key: "merge",
-              label: `Merge ${branchMenu.branch.name} into ${currentName}…`,
-              disabled: branchMenu.branch.current || !!busy,
-              onSelect: () => requestMerge(branchMenu.branch),
-            },
-            {
-              key: "rebase",
-              label: `Rebase 目前分支 ${currentName} 到 ${branchMenu.branch.name}…`,
-              disabled: branchMenu.branch.current || !!busy,
-              onSelect: () => requestRebase(branchMenu.branch),
-            },
-            { divider: true },
-            {
-              key: "delete",
-              label: `刪除分支 ${branchMenu.branch.name}…`,
-              disabled: branchMenu.branch.current || !!busy,
-              destructive: true,
-              onSelect: () => requestDelete(branchMenu.branch),
-            },
-          ]}
+          items={
+            branchMenu.branch.kind === "remote"
+              ? [
+                  {
+                    key: "checkout-remote",
+                    label: `Checkout ${branchMenu.branch.name}…`,
+                    disabled: !!busy,
+                    onSelect: () => requestCheckoutRemote(branchMenu.branch),
+                  },
+                  { divider: true },
+                  {
+                    key: "delete-remote",
+                    label: `刪除遠端分支 ${branchMenu.branch.name}…`,
+                    disabled: !!busy,
+                    destructive: true,
+                    onSelect: () => requestDeleteRemote(branchMenu.branch),
+                  },
+                ]
+              : [
+                  {
+                    key: "switch",
+                    label: `切換到 ${branchMenu.branch.name}`,
+                    disabled: branchMenu.branch.current || !!busy,
+                    onSelect: () => requestSwitch(branchMenu.branch),
+                  },
+                  {
+                    key: "merge",
+                    label: `Merge ${branchMenu.branch.name} into ${currentName}…`,
+                    disabled: branchMenu.branch.current || !!busy,
+                    onSelect: () => requestMerge(branchMenu.branch),
+                  },
+                  {
+                    key: "rebase",
+                    label: `Rebase 目前分支 ${currentName} 到 ${branchMenu.branch.name}…`,
+                    disabled: branchMenu.branch.current || !!busy,
+                    onSelect: () => requestRebase(branchMenu.branch),
+                  },
+                  { divider: true },
+                  {
+                    key: "rename",
+                    label: "重新命名…",
+                    disabled: !!busy,
+                    onSelect: () => openRename(branchMenu.branch),
+                  },
+                  {
+                    key: "upstream",
+                    label: "設定 upstream…",
+                    disabled: !!busy,
+                    onSelect: () => openUpstream(branchMenu.branch),
+                  },
+                  ...(branchMenu.branch.upstream
+                    ? []
+                    : [
+                        {
+                          key: "publish",
+                          label: `Publish 到 ${remoteName || "遠端"}…`,
+                          disabled: !remoteName || !!busy,
+                          onSelect: () => requestPublish(branchMenu.branch),
+                        },
+                      ]),
+                  {
+                    key: "force-push",
+                    label: "Force push（with lease）…",
+                    disabled: !remoteName || !!busy,
+                    destructive: true,
+                    onSelect: () => requestForcePush(branchMenu.branch),
+                  },
+                  { divider: true },
+                  {
+                    key: "delete",
+                    label: `刪除分支 ${branchMenu.branch.name}…`,
+                    disabled: branchMenu.branch.current || !!busy,
+                    destructive: true,
+                    onSelect: () => requestDelete(branchMenu.branch),
+                  },
+                ]
+          }
         />
       ) : null}
+      {renameOpen && editBranch ? (
+        <div
+          className="modal-backdrop"
+          onMouseDown={(event) => event.target === event.currentTarget && !busy && setRenameOpen(false)}
+        >
+          <div className="modal small" role="dialog" aria-modal="true" aria-label="重新命名分支">
+            <div className="modal-header">
+              <h2>重新命名分支</h2>
+              <Button appearance="subtle" icon={<Dismiss24Regular />} onClick={() => setRenameOpen(false)} disabled={!!busy} />
+            </div>
+            <div className="modal-body form-stack">
+              <div className="branch-source">
+                <strong>{editBranch.name}</strong>
+                <span>{shortOid(editBranch.oid)}</span>
+              </div>
+              <Field label="新分支名稱">
+                <UnderlineInput
+                  value={renameValue}
+                  onChange={(_, data) => setRenameValue(data.value)}
+                  placeholder="feature/new-name"
+                />
+              </Field>
+            </div>
+            <div className="modal-footer">
+              <Button appearance="secondary" onClick={() => setRenameOpen(false)} disabled={!!busy}>
+                取消
+              </Button>
+              <Button
+                appearance="primary"
+                onClick={submitRename}
+                disabled={!!busy || !renameValue.trim() || renameValue.trim() === editBranch.name}
+              >
+                重新命名
+              </Button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {upstreamOpen && editBranch ? (
+        <div
+          className="modal-backdrop"
+          onMouseDown={(event) => event.target === event.currentTarget && !busy && setUpstreamOpen(false)}
+        >
+          <div className="modal small" role="dialog" aria-modal="true" aria-label="設定 upstream">
+            <div className="modal-header">
+              <h2>設定 upstream</h2>
+              <Button appearance="subtle" icon={<Dismiss24Regular />} onClick={() => setUpstreamOpen(false)} disabled={!!busy} />
+            </div>
+            <div className="modal-body form-stack">
+              <div className="branch-source">
+                <strong>{editBranch.name}</strong>
+                <span>{editBranch.upstream || "尚未設定 upstream"}</span>
+              </div>
+              <Field label="Upstream 分支">
+                <UnderlineSelect value={upstreamValue} onChange={(_, data) => setUpstreamValue(data.value)}>
+                  {remote.map((entry) => (
+                    <option key={entry.fullName} value={entry.name}>
+                      {entry.name}
+                    </option>
+                  ))}
+                </UnderlineSelect>
+              </Field>
+            </div>
+            <div className="modal-footer">
+              <Button appearance="secondary" onClick={() => setUpstreamOpen(false)} disabled={!!busy}>
+                取消
+              </Button>
+              <Button appearance="primary" onClick={submitUpstream} disabled={!!busy || !upstreamValue.trim()}>
+                設定
+              </Button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
       {pendingCommand ? (
         <GitCommandDialog
           title={pendingCommand.title}

@@ -82,6 +82,18 @@ func DeleteBranchArgs(name string, force bool) []string {
 	return []string{"branch", flag, name}
 }
 
+func RenameBranchArgs(oldName, newName string) []string {
+	return []string{"branch", "-m", oldName, newName}
+}
+
+func SetUpstreamArgs(branch, upstream string) []string {
+	return []string{"branch", "--set-upstream-to=" + upstream, branch}
+}
+
+func CheckoutRemoteArgs(localName, remoteBranch string) []string {
+	return []string{"switch", "-c", localName, "--track", remoteBranch}
+}
+
 func MergeArgs(source, strategy string) []string {
 	args := []string{"merge"}
 	switch strategy {
@@ -131,6 +143,42 @@ func (r *Runner) DeleteBranch(ctx context.Context, root, name string, force bool
 		return model.OperationResult{}, r.OutputError(out, errOut, err)
 	}
 	return model.OperationResult{Success: true, Message: "Branch deleted", Output: strings.TrimSpace(out)}, nil
+}
+
+func (r *Runner) RenameBranch(ctx context.Context, root, oldName, newName string) (model.OperationResult, error) {
+	repo, err := r.Open(ctx, root)
+	if err != nil {
+		return model.OperationResult{}, err
+	}
+	out, errOut, err := r.RunBytes(ctx, repo.RootPath, nil, RenameBranchArgs(oldName, newName)...)
+	if err != nil {
+		return model.OperationResult{}, r.OutputError(out, errOut, err)
+	}
+	return model.OperationResult{Success: true, Message: "Branch renamed", Output: strings.TrimSpace(out)}, nil
+}
+
+func (r *Runner) SetUpstream(ctx context.Context, root, branch, upstream string) (model.OperationResult, error) {
+	repo, err := r.Open(ctx, root)
+	if err != nil {
+		return model.OperationResult{}, err
+	}
+	out, errOut, err := r.RunBytes(ctx, repo.RootPath, nil, SetUpstreamArgs(branch, upstream)...)
+	if err != nil {
+		return model.OperationResult{}, r.OutputError(out, errOut, err)
+	}
+	return model.OperationResult{Success: true, Message: "Upstream updated", Output: strings.TrimSpace(out)}, nil
+}
+
+func (r *Runner) CheckoutRemoteBranch(ctx context.Context, root, localName, remoteBranch string) (model.OperationResult, error) {
+	repo, err := r.Open(ctx, root)
+	if err != nil {
+		return model.OperationResult{}, err
+	}
+	out, errOut, err := r.RunBytes(ctx, repo.RootPath, nil, CheckoutRemoteArgs(localName, remoteBranch)...)
+	if err != nil {
+		return model.OperationResult{}, r.OutputError(out, errOut, err)
+	}
+	return model.OperationResult{Success: true, Message: "Checked out remote branch", Output: strings.TrimSpace(out)}, nil
 }
 
 func (r *Runner) Merge(ctx context.Context, root, source, strategy string) (model.OperationResult, error) {

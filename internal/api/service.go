@@ -450,6 +450,27 @@ func (a *BranchAPI) Delete(root, name string, force bool) (model.OperationResult
 	return a.s.runnerWithSettings().DeleteBranch(a.s.context(), root, name, force)
 }
 
+func (a *BranchAPI) Rename(root, oldName, newName string) (model.OperationResult, error) {
+	mu := a.s.repoLock(root)
+	mu.Lock()
+	defer mu.Unlock()
+	return a.s.runnerWithSettings().RenameBranch(a.s.context(), root, oldName, newName)
+}
+
+func (a *BranchAPI) SetUpstream(root, branch, upstream string) (model.OperationResult, error) {
+	mu := a.s.repoLock(root)
+	mu.Lock()
+	defer mu.Unlock()
+	return a.s.runnerWithSettings().SetUpstream(a.s.context(), root, branch, upstream)
+}
+
+func (a *BranchAPI) CheckoutRemote(root, localName, remoteBranch string) (model.OperationResult, error) {
+	mu := a.s.repoLock(root)
+	mu.Lock()
+	defer mu.Unlock()
+	return a.s.runnerWithSettings().CheckoutRemoteBranch(a.s.context(), root, localName, remoteBranch)
+}
+
 func (a *BranchAPI) Merge(root, source, strategy string) (model.OperationResult, error) {
 	mu := a.s.repoLock(root)
 	mu.Lock()
@@ -496,11 +517,25 @@ func (a *SyncAPI) Pull(root, remote, branch, strategy string) (model.OperationRe
 	return a.s.runnerWithSettings().Pull(a.s.context(), root, remote, branch, strategy)
 }
 
-func (a *SyncAPI) Push(root, remote, branch string) (model.OperationResult, error) {
+func (a *SyncAPI) Push(root, remote, branch string, forceWithLease bool) (model.OperationResult, error) {
 	mu := a.s.repoLock(root)
 	mu.Lock()
 	defer mu.Unlock()
-	return a.s.runnerWithSettings().Push(a.s.context(), root, remote, branch)
+	return a.s.runnerWithSettings().Push(a.s.context(), root, remote, branch, forceWithLease)
+}
+
+func (a *SyncAPI) Publish(root, remote, branch string) (model.OperationResult, error) {
+	mu := a.s.repoLock(root)
+	mu.Lock()
+	defer mu.Unlock()
+	return a.s.runnerWithSettings().PublishBranch(a.s.context(), root, remote, branch)
+}
+
+func (a *SyncAPI) DeleteRemoteBranch(root, remote, branch string) (model.OperationResult, error) {
+	mu := a.s.repoLock(root)
+	mu.Lock()
+	defer mu.Unlock()
+	return a.s.runnerWithSettings().DeleteRemoteBranch(a.s.context(), root, remote, branch)
 }
 
 func (a *SyncAPI) Preview(root string, req model.CommandRequest) (model.CommandPreview, error) {

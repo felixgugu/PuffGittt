@@ -74,9 +74,12 @@ This file tracks the gap between the current PuffGittt build and
 - Local/remote branch listing with current/upstream/merged metadata.
 - Create, switch, delete, merge and rebase APIs.
 - Create/switch/delete/merge/rebase wired in the UI.
-- Right-click local branch context menu for switch, merge, rebase and delete.
-- Merge and rebase direction labels with Git command confirmation dialogs.
+- Rename, set upstream, publish, checkout remote branch and delete remote branch.
+- Right-click local branch context menu for switch, merge, rebase, rename, upstream,
+  publish, force push and delete.
+- Right-click remote branch context menu for checkout and remote deletion.
 - Fetch, pull (merge/rebase/ff-only strategy API) and push with command previews.
+- Force-with-lease push.
 - Ahead/behind status.
 
 ### Conflicts and stashes
@@ -113,7 +116,7 @@ This file tracks the gap between the current PuffGittt build and
   clean; there is no backup retention or multi-step undo history.
 - **Merge/rebase**: basic Git commands only; no strategy planner, expected-head
   validation or detailed conflict-aware recovery UI.
-- **Branch lifecycle**: no rename, set-upstream, publish, remote checkout or branch compare.
+- **Branch compare**: no `base...compare` commit/file comparison screen.
 - **Commit graph**: functional lane algorithm but not the full frontier/cross-page
   snapshot implementation described in the spec.
 - **Search**: commit subject search only; author/SHA/path search not complete.
@@ -146,13 +149,11 @@ This file tracks the gap between the current PuffGittt build and
 - Automatic backup retention and multi-step undo history.
 - Reflog selectors for refs other than HEAD and cross-ref reflog browsing.
 - Interactive rebase editor and todo manipulation.
-- Cherry-pick, blame and per-file history screens.
+- Blame and per-file history screens.
 - Image diff (before/after, slider, checkerboard).
 - Worktrees, submodules and Git LFS.
 - Embedded terminal / ConPTY.
-- Remote repository management UI, credentials, host-key verification and
-  force-with-lease push flow.
-- Branch rename, set upstream, publish branch, remote branch checkout and compare.
+- Remote repository management UI, credentials and host-key verification.
 - Draft persistence and commit/form restoration.
 - Backup retention and restore UI.
 - High-contrast theme.

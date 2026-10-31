@@ -65,7 +65,7 @@ recommended implementation order.
 | Blame | Yes | Yes | No | P1 |
 | Branch compare | Yes | Yes | No | P1 |
 | Remote management UI | Yes | Yes | No | P1 |
-| Force-with-lease push | Yes | Yes | No | P1 |
+| Force-with-lease push | Yes | Yes | Yes | P1 |
 | Credential / SSH UI | Yes | Yes | No | P1 |
 | Hunk-level conflict resolution | Yes | Yes | Partial | P1 |
 | Submodules | Yes | Yes | No | P2 |
@@ -160,18 +160,17 @@ Rationale:
 ## Second wave
 
 1. Remote management: add/edit/delete remotes, default remote, fetch/push URLs.
-2. Branch lifecycle: rename, set upstream, publish, checkout remote branch,
-   delete remote branch.
-3. Branch/commit compare.
-4. File history and blame.
-5. Credential and SSH host-key UI.
-6. Force-with-lease push.
+2. Branch lifecycle: implemented (rename, set upstream, publish, checkout remote branch,
+   delete remote branch).
+3. Force-with-lease push: implemented.
+4. Branch/commit compare.
+5. File history and blame.
+6. Credential and SSH host-key UI.
 
 ## Third wave
 
 1. Interactive rebase with todo editor and conflict Continue/Skip/Abort.
-2. Cherry-pick, including merge mainline selection.
-3. Conflict editor improvements: ours/theirs/both, hunk-level resolution.
+2. Conflict editor improvements: ours/theirs/both, hunk-level resolution.
 4. Stash diff preview and partial apply.
 5. Tag push, remote tags and signed tags.
 

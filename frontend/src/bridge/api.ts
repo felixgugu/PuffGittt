@@ -124,6 +124,12 @@ export const api = {
     switch: (root: string, name: string) => invoke<OperationResult>("BranchAPI", "Switch", root, name),
     delete: (root: string, name: string, force: boolean) =>
       invoke<OperationResult>("BranchAPI", "Delete", root, name, force),
+    rename: (root: string, oldName: string, newName: string) =>
+      invoke<OperationResult>("BranchAPI", "Rename", root, oldName, newName),
+    setUpstream: (root: string, branch: string, upstream: string) =>
+      invoke<OperationResult>("BranchAPI", "SetUpstream", root, branch, upstream),
+    checkoutRemote: (root: string, localName: string, remoteBranch: string) =>
+      invoke<OperationResult>("BranchAPI", "CheckoutRemote", root, localName, remoteBranch),
     merge: (root: string, source: string, strategy: string) =>
       invoke<OperationResult>("BranchAPI", "Merge", root, source, strategy),
     rebase: (root: string, onto: string) => invoke<OperationResult>("BranchAPI", "Rebase", root, onto),
@@ -135,8 +141,12 @@ export const api = {
     fetch: (root: string, remote: string) => invoke<OperationResult>("SyncAPI", "Fetch", root, remote),
     pull: (root: string, remote: string, branch: string, strategy: string) =>
       invoke<OperationResult>("SyncAPI", "Pull", root, remote, branch, strategy),
-    push: (root: string, remote: string, branch: string) =>
-      invoke<OperationResult>("SyncAPI", "Push", root, remote, branch),
+    push: (root: string, remote: string, branch: string, forceWithLease = false) =>
+      invoke<OperationResult>("SyncAPI", "Push", root, remote, branch, forceWithLease),
+    publish: (root: string, remote: string, branch: string) =>
+      invoke<OperationResult>("SyncAPI", "Publish", root, remote, branch),
+    deleteRemoteBranch: (root: string, remote: string, branch: string) =>
+      invoke<OperationResult>("SyncAPI", "DeleteRemoteBranch", root, remote, branch),
     preview: (root: string, request: CommandRequest) =>
       invoke<CommandPreview>("SyncAPI", "Preview", root, request),
   },

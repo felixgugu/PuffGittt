@@ -47,6 +47,21 @@ func TestPreviewBranchCommands(t *testing.T) {
 			request: model.CommandRequest{Action: "create", Name: "topic", StartPoint: "HEAD"},
 			command: "git branch topic HEAD",
 		},
+		{
+			name:    "rename",
+			request: model.CommandRequest{Action: "rename", Source: "feature", Name: "feature2"},
+			command: "git branch -m feature feature2",
+		},
+		{
+			name:    "set-upstream",
+			request: model.CommandRequest{Action: "set-upstream", Name: "feature", Target: "main"},
+			command: "git branch --set-upstream-to=main feature",
+		},
+		{
+			name:    "checkout-remote",
+			request: model.CommandRequest{Action: "checkout-remote", Source: "main", Name: "main-local"},
+			command: "git switch -c main-local --track main",
+		},
 	}
 
 	for _, test := range tests {
@@ -76,6 +91,14 @@ func TestPreviewSyncCommands(t *testing.T) {
 		{request: model.CommandRequest{Action: "fetch"}, command: "git fetch --progress"},
 		{request: model.CommandRequest{Action: "pull", Strategy: "merge"}, command: "git pull --no-rebase"},
 		{request: model.CommandRequest{Action: "push"}, command: "git push --progress"},
+		{
+			request: model.CommandRequest{Action: "push", Force: true},
+			command: "git push --progress --force-with-lease",
+		},
+		{
+			request: model.CommandRequest{Action: "publish", Branch: "main"},
+			command: "git push --progress -u",
+		},
 	}
 
 	for _, test := range tests {

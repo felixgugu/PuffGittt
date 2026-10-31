@@ -54,10 +54,12 @@ wails build
   dialog, create branch/tag, copy OID, reset, revert, drop commit and cherry-pick
   (including merge mainline selection), all through a right-click context menu
   with Git command previews.
-- Branches: local and remote lists, create, switch, merge, rebase and delete through
-  a right-click context menu, with merge/rebase direction labels and Git command
+- Branches: local and remote lists, create, switch, merge, rebase, rename, delete,
+  set upstream, publish, checkout remote branch and delete remote branch through
+  right-click context menus, with merge/rebase direction labels and Git command
   confirmation dialogs.
-- Sync: fetch, pull, push, with Git command previews and branch ahead/behind status.
+- Sync: fetch, pull, push, force-with-lease push, with Git command previews and
+  branch ahead/behind status.
 - Conflicts: conflict list, three-way content, editable result, mark resolved,
   continue/abort for in-progress operations.
 - Stashes: list, create, apply, pop, drop.
@@ -76,11 +78,9 @@ and [docs/roadmap.md](docs/roadmap.md) for the SmartGit / SourceTree benchmark a
 
 Highlights:
 
-- Filesystem watcher; current refresh is manual or 10-second status polling.
 - Background task queue, progress events, cancellation and operation locks beyond the in-process mutex.
 - Interactive rebase, blame, file history, image diff, worktrees, submodules and LFS.
-- Remote configuration UI, force-with-lease push flow, SSH host-key UI and credential prompts.
-- Branch rename, set upstream, publish branch, checkout remote branch and branch compare.
+- Remote configuration UI, SSH host-key UI and credential prompts.
 - Tags push / remote tag management and signed tags.
 - Terminal/ConPTY, Git Flow, provider integrations and custom actions.
 - Draft persistence, backup retention, diagnostics export, installer, code signing and updater.

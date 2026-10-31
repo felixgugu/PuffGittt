@@ -325,6 +325,12 @@ export async function mockInvoke<T>(group: string, method: string, args: any[]):
       return ok("Merged") as T;
     case "BranchAPI.Rebase":
       return ok("Rebased") as T;
+    case "BranchAPI.Rename":
+      return ok("Branch renamed") as T;
+    case "BranchAPI.SetUpstream":
+      return ok("Upstream updated") as T;
+    case "BranchAPI.CheckoutRemote":
+      return ok("Checked out remote branch") as T;
     case "BranchAPI.Preview": {
       const request = args[1] as CommandRequest;
       const commands: Record<string, string> = {
@@ -333,21 +339,28 @@ export async function mockInvoke<T>(group: string, method: string, args: any[]):
         switch: `git switch ${request.name || ""}`.trim(),
         delete: `git branch ${request.force ? "-D" : "-d"} ${request.name || ""}`.trim(),
         create: `git branch ${request.name || ""}${request.startPoint ? ` ${request.startPoint}` : ""}`.trim(),
+        rename: `git branch -m ${request.source || ""} ${request.name || ""}`.trim(),
+        "set-upstream": `git branch --set-upstream-to=${request.target || ""} ${request.name || ""}`.trim(),
+        "checkout-remote": `git switch -c ${request.name || ""} --track ${request.source || ""}`.trim(),
       };
       return { command: commands[request.action] || "git", destructive: request.action === "delete" || request.action === "rebase" } as CommandPreview as T;
     }
     case "SyncAPI.Fetch":
     case "SyncAPI.Pull":
     case "SyncAPI.Push":
+    case "SyncAPI.Publish":
+    case "SyncAPI.DeleteRemoteBranch":
       return ok("Synchronized") as T;
     case "SyncAPI.Preview": {
       const request = args[1] as CommandRequest;
       const commands: Record<string, string> = {
         fetch: `git fetch --progress${request.remote ? ` ${request.remote}` : ""}`,
         pull: `git pull --no-rebase${request.remote ? ` ${request.remote}` : ""}${request.branch ? ` ${request.branch}` : ""}`,
-        push: `git push --progress${request.remote ? ` ${request.remote}` : ""}${request.branch ? ` ${request.branch}` : ""}`,
+        push: `git push --progress${request.force ? " --force-with-lease" : ""}${request.remote ? ` ${request.remote}` : ""}${request.branch ? ` ${request.branch}` : ""}`,
+        publish: `git push --progress -u${request.remote ? ` ${request.remote}` : ""}${request.branch ? ` ${request.branch}` : ""}`,
+        "delete-remote": `git push ${request.remote || ""} --delete ${request.branch || ""}`.trim(),
       };
-      return { command: commands[request.action] || "git", destructive: false } as CommandPreview as T;
+      return { command: commands[request.action] || "git", destructive: request.action === "delete-remote" } as CommandPreview as T;
     }
     case "ConflictAPI.List":
       return [] as ConflictFile[] as T;

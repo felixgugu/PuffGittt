@@ -89,6 +89,30 @@ func (r *Runner) PreviewBranchCommand(ctx context.Context, root string, req mode
 			}
 		}
 		args = CreateBranchArgs(req.Name, req.StartPoint)
+	case "rename":
+		if err := r.verifyLocalBranch(ctx, repo.RootPath, req.Source); err != nil {
+			return model.CommandPreview{}, err
+		}
+		if err := r.verifyBranchName(ctx, repo.RootPath, req.Name); err != nil {
+			return model.CommandPreview{}, err
+		}
+		args = RenameBranchArgs(req.Source, req.Name)
+	case "set-upstream":
+		if err := r.verifyLocalBranch(ctx, repo.RootPath, req.Name); err != nil {
+			return model.CommandPreview{}, err
+		}
+		if err := r.verifyRevision(ctx, repo.RootPath, req.Target); err != nil {
+			return model.CommandPreview{}, err
+		}
+		args = SetUpstreamArgs(req.Name, req.Target)
+	case "checkout-remote":
+		if err := r.verifyRevision(ctx, repo.RootPath, req.Source); err != nil {
+			return model.CommandPreview{}, err
+		}
+		if err := r.verifyBranchName(ctx, repo.RootPath, req.Name); err != nil {
+			return model.CommandPreview{}, err
+		}
+		args = CheckoutRemoteArgs(req.Name, req.Source)
 	default:
 		return model.CommandPreview{}, fmt.Errorf("unsupported branch preview action %q", req.Action)
 	}
@@ -110,16 +134,26 @@ func (r *Runner) PreviewSyncCommand(ctx context.Context, root string, req model.
 	}
 
 	var args []string
+	destructive := false
 	switch req.Action {
 	case "fetch":
 		args = FetchArgs(req.Remote)
 	case "pull":
 		args = PullArgs(req.Remote, req.Branch, req.Strategy)
 	case "push":
-		args = PushArgs(req.Remote, req.Branch)
+		args = PushArgs(req.Remote, req.Branch, req.Force)
+		destructive = req.Force
+	case "publish":
+		args = PublishBranchArgs(req.Remote, req.Branch)
+	case "delete-remote":
+		if strings.TrimSpace(req.Branch) == "" {
+			return model.CommandPreview{}, fmt.Errorf("remote branch is required")
+		}
+		args = DeleteRemoteBranchArgs(req.Remote, req.Branch)
+		destructive = true
 	default:
 		return model.CommandPreview{}, fmt.Errorf("unsupported sync preview action %q", req.Action)
 	}
 
-	return model.CommandPreview{Command: CommandString(args)}, nil
+	return model.CommandPreview{Command: CommandString(args), Destructive: destructive}, nil
 }
