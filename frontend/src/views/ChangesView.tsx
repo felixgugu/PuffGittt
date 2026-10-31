@@ -10,6 +10,7 @@ import {
   ChevronRight24Regular,
   DocumentText24Regular,
   FolderOpen24Regular,
+  History24Regular,
 } from "@fluentui/react-icons";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
@@ -20,6 +21,7 @@ import type { FileChange, HunkSelection } from "../types";
 import { ChangesFilesPanel } from "../components/ChangesFilesPanel";
 import { DiffEditor } from "../components/DiffEditor";
 import { HunkStagingPanel } from "../components/HunkStagingPanel";
+import { FileInsightsDialog } from "../components/FileInsightsDialog";
 import { UnderlineInput, UnderlineTextarea } from "../components/FormControls";
 import { fileHasStaged, fileHasUnstaged } from "../lib/fileTree";
 import { changeCode, fileStatusClass, fileStatusLabel } from "../lib/format";
@@ -40,6 +42,7 @@ export function ChangesView({ tab }: ChangesViewProps) {
   const [description, setDescription] = useState("");
   const [amend, setAmend] = useState(false);
   const [filesCollapsed, setFilesCollapsed] = useState(false);
+  const [insightsOpen, setInsightsOpen] = useState(false);
   const filesPanelRef = useRef<ImperativePanelHandle>(null);
 
   const statusQuery = useQuery({
@@ -252,6 +255,14 @@ export function ChangesView({ tab }: ChangesViewProps) {
                     <Button size="small" appearance="subtle" onClick={() => setSplitDiff((value) => !value)}>
                       {splitDiff ? t("changes.inline") : t("changes.split")}
                     </Button>
+                    <Button
+                      size="small"
+                      appearance="subtle"
+                      icon={<History24Regular />}
+                      title="File History / Blame"
+                      aria-label="File History / Blame"
+                      onClick={() => setInsightsOpen(true)}
+                    />
                     <Button size="small" appearance="subtle" icon={<FolderOpen24Regular />} title={t("changes.openInExplorer")} onClick={() => void api.app.openInExplorer(root)} />
                   </>
                 ) : null}
@@ -294,6 +305,9 @@ export function ChangesView({ tab }: ChangesViewProps) {
           </div>
         </Panel>
       </PanelGroup>
+      {insightsOpen && selected ? (
+        <FileInsightsDialog root={root} path={selected.path} onClose={() => setInsightsOpen(false)} />
+      ) : null}
     </div>
   );
 }

@@ -45,6 +45,7 @@ This file tracks the gap between the current PuffGittt build and
 - Discard tracked paths (without backup/undo). Untracked physical deletion is not exposed.
 - Monaco diff with inline/split toggle and a shared maximized file diff dialog.
 - Double-click a file to open the shared diff dialog with previous/next navigation.
+- File History and Blame dialog from the diff toolbar.
 - Repository change monitor polling porcelain status every 1.5 seconds; emits
   `repo:changed` Wails events and refreshes open tabs automatically.
 - Binary detection and 2 MiB preview cap.
@@ -153,7 +154,8 @@ This file tracks the gap between the current PuffGittt build and
 - Automatic backup retention and multi-step undo history.
 - Reflog selectors for refs other than HEAD and cross-ref reflog browsing.
 - Interactive rebase editor and todo manipulation.
-- Blame and per-file history screens.
+- Blame and per-file history screens are implemented as a dialog; no dedicated
+  file-history workspace or blame range selection yet.
 - Image diff (before/after, slider, checkerboard).
 - Worktrees, submodules and Git LFS.
 - Embedded terminal / ConPTY.

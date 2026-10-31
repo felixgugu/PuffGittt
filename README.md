@@ -49,6 +49,8 @@ wails build
   navigation.
 - Repository change monitor: polls porcelain status and emits `repo:changed` so
   open repositories refresh automatically after external edits or Git commands.
+- File History and Blame dialog from the Changes diff toolbar, with per-file
+  commit history and line-by-line blame.
 - History: branch filter, commit search, virtualized commit list, SVG lane graph,
   resizable commit details/changed files, tree/flat changed-file modes, commit diff
   dialog, create branch/tag, copy OID, reset, revert, drop commit and cherry-pick

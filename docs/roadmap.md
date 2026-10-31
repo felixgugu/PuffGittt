@@ -61,8 +61,8 @@ recommended implementation order.
 | Reflog / Undo | Yes | Partial | Basic | P0 |
 | Interactive rebase | Yes | Yes | No | P1 |
 | Cherry-pick | Yes | Yes | Yes | P1 |
-| File history | Yes | Yes | No | P1 |
-| Blame | Yes | Yes | No | P1 |
+| File history | Yes | Yes | Yes | P1 |
+| Blame | Yes | Yes | Yes | P1 |
 | Branch compare | Yes | Yes | Yes | P1 |
 | Remote management UI | Yes | Yes | Yes | P1 |
 | Force-with-lease push | Yes | Yes | Yes | P1 |

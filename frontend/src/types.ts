@@ -99,6 +99,15 @@ export interface BranchCompare {
   files: CommitFile[];
 }
 
+export interface BlameLine {
+  line: number;
+  oid: string;
+  author: string;
+  date: string;
+  summary: string;
+  text: string;
+}
+
 export interface CommitDetail {
   commit: Commit;
   files: CommitFile[];

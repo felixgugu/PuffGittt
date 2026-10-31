@@ -398,6 +398,14 @@ func (a *HistoryAPI) Drop(root, oid string) (model.OperationResult, error) {
 	return result, err
 }
 
+func (a *HistoryAPI) FileHistory(root, path string, limit int) ([]model.CompareCommit, error) {
+	return a.s.runnerWithSettings().FileHistory(a.s.context(), root, path, limit)
+}
+
+func (a *HistoryAPI) Blame(root, path string) ([]model.BlameLine, error) {
+	return a.s.runnerWithSettings().Blame(a.s.context(), root, path)
+}
+
 func (a *HistoryAPI) CherryPick(root, oid, mainline string) (model.OperationResult, error) {
 	mu := a.s.repoLock(root)
 	mu.Lock()

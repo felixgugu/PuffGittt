@@ -2,10 +2,12 @@ import { mockInvoke } from "./mock";
 import type {
   Branch,
   BranchCompare,
+  BlameLine,
   CommandPreview,
   CommandRequest,
   Commit,
   CommitDetail,
+  CompareCommit,
   ConflictFile,
   ConflictVersions,
   DiffDocument,
@@ -113,6 +115,9 @@ export const api = {
       invoke<OperationResult>("HistoryAPI", "Drop", root, oid),
     cherryPick: (root: string, oid: string, mainline: string) =>
       invoke<OperationResult>("HistoryAPI", "CherryPick", root, oid, mainline),
+    fileHistory: (root: string, path: string, limit: number) =>
+      invoke<CompareCommit[]>("HistoryAPI", "FileHistory", root, path, limit),
+    blame: (root: string, path: string) => invoke<BlameLine[]>("HistoryAPI", "Blame", root, path),
     reflog: (root: string, limit: number) =>
       invoke<ReflogEntry[]>("HistoryAPI", "Reflog", root, limit),
     undoInfo: (root: string) => invoke<UndoRecord>("HistoryAPI", "UndoInfo", root),

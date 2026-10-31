@@ -102,6 +102,15 @@ type BranchCompare struct {
 	Files         []CommitFile    `json:"files"`
 }
 
+type BlameLine struct {
+	Line    int    `json:"line"`
+	Oid     string `json:"oid"`
+	Author  string `json:"author"`
+	Date    string `json:"date"`
+	Summary string `json:"summary"`
+	Text    string `json:"text"`
+}
+
 type CommitDetail struct {
 	Commit Commit       `json:"commit"`
 	Files  []CommitFile `json:"files"`
