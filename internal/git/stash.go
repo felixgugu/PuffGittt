@@ -69,6 +69,22 @@ func (r *Runner) StashApply(ctx context.Context, root, ref string, drop bool) (m
 	return model.OperationResult{Success: true, Message: "Stash applied", Output: strings.TrimSpace(out)}, nil
 }
 
+func (r *Runner) StashDiff(ctx context.Context, root, ref string) (string, error) {
+	repo, err := r.Open(ctx, root)
+	if err != nil {
+		return "", err
+	}
+	if strings.TrimSpace(ref) == "" {
+		ref = "stash@{0}"
+	}
+	out, errOut, err := r.RunBytes(ctx, repo.RootPath, nil,
+		"stash", "show", "-p", "--no-color", "--no-ext-diff", "--include-untracked", ref)
+	if err != nil {
+		return "", r.OutputError(out, errOut, err)
+	}
+	return out, nil
+}
+
 func (r *Runner) StashDrop(ctx context.Context, root, ref string) (model.OperationResult, error) {
 	repo, err := r.Open(ctx, root)
 	if err != nil {

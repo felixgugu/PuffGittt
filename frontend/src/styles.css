@@ -1492,6 +1492,26 @@ svg {
   white-space: nowrap;
 }
 
+.stash-diff-modal {
+  width: min(1000px, 94vw);
+  height: 78vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.stash-diff {
+  margin: 0;
+  max-height: 100%;
+  overflow: auto;
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface-muted);
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  white-space: pre;
+}
+
 .selected-file-summary {
   display: flex;
   align-items: center;

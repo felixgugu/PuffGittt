@@ -438,6 +438,8 @@ export async function mockInvoke<T>(group: string, method: string, args: any[]):
     case "StashAPI.Apply":
     case "StashAPI.Drop":
       return ok("Stash updated") as T;
+    case "StashAPI.Diff":
+      return "diff --git a/demo.txt b/demo.txt\n--- a/demo.txt\n+++ b/demo.txt\n@@ -1 +1 @@\n-old\n+new\n" as T;
     case "TagAPI.List":
       return [] as Tag[] as T;
     case "TagAPI.Create":

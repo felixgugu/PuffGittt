@@ -6,6 +6,7 @@ import {
   ArrowSync24Regular,
   Delete24Regular,
   Dismiss24Regular,
+  Eye24Regular,
 } from "@fluentui/react-icons";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
@@ -27,6 +28,9 @@ export function StashesView({ tab }: StashesViewProps) {
   const [createOpen, setCreateOpen] = useState(false);
   const [message, setMessage] = useState("");
   const [includeUntracked, setIncludeUntracked] = useState(false);
+  const [diffOpen, setDiffOpen] = useState<string | null>(null);
+  const [diffText, setDiffText] = useState("");
+  const [diffLoading, setDiffLoading] = useState(false);
 
   const stashes = useQuery({ queryKey: ["stashes", root], queryFn: () => api.stash.list(root) });
 
@@ -57,6 +61,19 @@ export function StashesView({ tab }: StashesViewProps) {
     });
   };
 
+  const openDiff = async (ref: string) => {
+    setDiffOpen(ref);
+    setDiffLoading(true);
+    setDiffText("");
+    try {
+      setDiffText(await api.stash.diff(root, ref));
+    } catch (error: any) {
+      setStatusMessage(error?.message || String(error));
+    } finally {
+      setDiffLoading(false);
+    }
+  };
+
   return (
     <div className="stashes-view">
       <div className="panel-card stashes-card">
@@ -78,6 +95,14 @@ export function StashesView({ tab }: StashesViewProps) {
               <span>{entry.ref} · {shortOid(entry.oid)} · {formatDate(entry.date)}</span>
             </div>
             <div className="stash-actions">
+              <Button
+                size="small"
+                appearance="subtle"
+                icon={<Eye24Regular />}
+                title="檢視 Stash 差異"
+                disabled={!!busy || diffLoading}
+                onClick={() => void openDiff(entry.ref)}
+              />
               <Button
                 size="small"
                 appearance="subtle"
@@ -128,6 +153,26 @@ export function StashesView({ tab }: StashesViewProps) {
               <Button appearance="primary" onClick={handleCreate} disabled={busy === "create"}>
                 {t("stashes.create")}
               </Button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+      {diffOpen ? (
+        <div className="modal-backdrop" onMouseDown={(event) => event.target === event.currentTarget && setDiffOpen(null)}>
+          <div className="modal stash-diff-modal" role="dialog" aria-modal="true" aria-label={`${diffOpen} 差異`}>
+            <div className="modal-header">
+              <h2>{diffOpen}</h2>
+              <Button appearance="subtle" icon={<Dismiss24Regular />} title="關閉" onClick={() => setDiffOpen(null)} />
+            </div>
+            <div className="modal-body">
+              {diffLoading ? (
+                <div className="center-state"><Spinner label="載入中…" /></div>
+              ) : (
+                <pre className="stash-diff">{diffText || "此 Stash 沒有可顯示的差異。"}</pre>
+              )}
+            </div>
+            <div className="modal-footer">
+              <Button appearance="secondary" onClick={() => setDiffOpen(null)}>關閉</Button>
             </div>
           </div>
         </div>

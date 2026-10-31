@@ -92,7 +92,7 @@ This file tracks the gap between the current PuffGittt build and
 - Editable result, save result and mark resolved.
 - One-click use ours, use theirs or combine both in the result editor.
 - Continue/abort for merge, rebase, cherry-pick and revert.
-- Stash list, create, apply, pop, drop.
+- Stash list, create, apply, pop, drop and diff preview.
 
 ### Tags
 - Tag list.

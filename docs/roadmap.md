@@ -72,7 +72,7 @@ recommended implementation order.
 | Git LFS | Yes | Yes | No | P2 |
 | Git Flow | Partial | Strong | No | P2 |
 | Tag push / signed tags | Yes | Yes | Partial | P2 |
-| Stash diff / partial apply | Yes | Yes | No | P2 |
+| Stash diff / partial apply | Yes | Yes | Partial | P2 |
 | Provider integrations / PRs | Yes | Yes | No | P2 |
 | Custom actions | Yes | Yes | No | P3 |
 | Embedded terminal | Yes | No | No | P3 |

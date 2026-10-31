@@ -652,6 +652,10 @@ func (a *StashAPI) Drop(root, ref string) (model.OperationResult, error) {
 	return a.s.runnerWithSettings().StashDrop(a.s.context(), root, ref)
 }
 
+func (a *StashAPI) Diff(root, ref string) (string, error) {
+	return a.s.runnerWithSettings().StashDiff(a.s.context(), root, ref)
+}
+
 func (a *TagAPI) List(root string) ([]git.Tag, error) {
 	return a.s.runnerWithSettings().Tags(a.s.context(), root)
 }

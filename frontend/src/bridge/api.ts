@@ -186,6 +186,7 @@ export const api = {
     apply: (root: string, ref: string, drop: boolean) =>
       invoke<OperationResult>("StashAPI", "Apply", root, ref, drop),
     drop: (root: string, ref: string) => invoke<OperationResult>("StashAPI", "Drop", root, ref),
+    diff: (root: string, ref: string) => invoke<string>("StashAPI", "Diff", root, ref),
   },
   tags: {
     list: (root: string) => invoke<Tag[]>("TagAPI", "List", root),

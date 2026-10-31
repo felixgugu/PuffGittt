@@ -65,7 +65,7 @@ wails build
   branch ahead/behind status.
 - Conflicts: conflict list, three-way content, editable result, one-click ours/theirs/both,
   mark resolved, continue/abort for in-progress operations.
-- Stashes: list, create, apply, pop, drop.
+- Stashes: list, create, apply, pop, drop, diff preview.
 - Tags: list, create lightweight/annotated tags, delete tags, push a tag and push all tags.
 - Settings: theme, language, base font size and family, projects folder,
   Git executable path, commit identity, and About/environment versions.
