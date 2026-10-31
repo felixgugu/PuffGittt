@@ -89,6 +89,7 @@ This file tracks the gap between the current PuffGittt build and
 - Unmerged index detection via `git ls-files -u -z`.
 - Three-way content from index stages 1/2/3.
 - Editable result, save result and mark resolved.
+- One-click use ours, use theirs or combine both in the result editor.
 - Continue/abort for merge, rebase, cherry-pick and revert.
 - Stash list, create, apply, pop, drop.
 

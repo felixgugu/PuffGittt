@@ -63,8 +63,8 @@ wails build
 - Remote management: add remotes, edit fetch/push URLs and remove remotes.
 - Sync: fetch, pull, push, force-with-lease push, with Git command previews and
   branch ahead/behind status.
-- Conflicts: conflict list, three-way content, editable result, mark resolved,
-  continue/abort for in-progress operations.
+- Conflicts: conflict list, three-way content, editable result, one-click ours/theirs/both,
+  mark resolved, continue/abort for in-progress operations.
 - Stashes: list, create, apply, pop, drop.
 - Tags: list, create lightweight/annotated tags and delete tags.
 - Settings: theme, language, base font size and family, projects folder,

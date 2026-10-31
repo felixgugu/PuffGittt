@@ -141,7 +141,38 @@ export function ConflictsView({ tab }: ConflictsViewProps) {
                 </div>
               </div>
               <div className="conflict-result">
-                <div className="conflict-pane-heading">{t("conflicts.result")}</div>
+                <div className="conflict-pane-heading">
+                  <span>{t("conflicts.result")}</span>
+                  <div className="tree-filter-spacer" />
+                  <button
+                    type="button"
+                    className="tree-action-link"
+                    disabled={!!busy}
+                    onClick={() => setResult(versions.data!.ours)}
+                  >
+                    採用 Ours
+                  </button>
+                  <button
+                    type="button"
+                    className="tree-action-link"
+                    disabled={!!busy}
+                    onClick={() => setResult(versions.data!.theirs)}
+                  >
+                    採用 Theirs
+                  </button>
+                  <button
+                    type="button"
+                    className="tree-action-link"
+                    disabled={!!busy}
+                    onClick={() => {
+                      const ours = versions.data!.ours || "";
+                      const theirs = versions.data!.theirs || "";
+                      setResult(`${ours}${ours && !ours.endsWith("\n") ? "\n" : ""}${theirs}`);
+                    }}
+                  >
+                    保留兩邊
+                  </button>
+                </div>
                 <textarea value={result} onChange={(event) => setResult(event.target.value)} />
               </div>
               <div className="conflict-actions">
