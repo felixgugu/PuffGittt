@@ -81,8 +81,11 @@ func (s *Service) monitorRepo(monitor *repoMonitor) {
 				continue
 			}
 			monitor.last = fingerprint
-			if s.emit != nil {
-				s.emit("repo:changed", map[string]string{"root": monitor.root})
+			s.emitMu.Lock()
+			emit := s.emit
+			s.emitMu.Unlock()
+			if emit != nil {
+				emit("repo:changed", map[string]string{"root": monitor.root})
 			}
 		}
 	}
