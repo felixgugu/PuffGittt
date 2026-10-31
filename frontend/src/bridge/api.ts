@@ -22,6 +22,7 @@ import type {
   Settings,
   StashEntry,
   Status,
+  Submodule,
   Tag,
   UndoRecord,
   Worktree,
@@ -89,6 +90,10 @@ export const api = {
     getStatus: (root: string) => invoke<Status>("RepoAPI", "GetStatus", root),
     getBranches: (root: string) => invoke<Branch[]>("RepoAPI", "GetBranches", root),
     getRemotes: (root: string) => invoke<Remote[]>("RepoAPI", "GetRemotes", root),
+    getSubmodules: (root: string) => invoke<Submodule[]>("RepoAPI", "GetSubmodules", root),
+    updateSubmodule: (root: string, path: string) =>
+      invoke<OperationResult>("RepoAPI", "UpdateSubmodule", root, path),
+    syncSubmodules: (root: string) => invoke<OperationResult>("RepoAPI", "SyncSubmodules", root),
   },
   change: {
     getDiff: (root: string, path: string, side: string, revision: string) =>

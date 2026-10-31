@@ -133,6 +133,13 @@ type Worktree struct {
 	PruneReason string `json:"pruneReason,omitempty"`
 }
 
+type Submodule struct {
+	Path     string `json:"path"`
+	Oid      string `json:"oid"`
+	Describe string `json:"describe,omitempty"`
+	Status   string `json:"status"`
+}
+
 type CommitDetail struct {
 	Commit Commit       `json:"commit"`
 	Files  []CommitFile `json:"files"`

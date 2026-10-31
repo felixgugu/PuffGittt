@@ -10,6 +10,7 @@ import {
   Dismiss24Regular,
   FolderAdd24Regular,
   History24Regular,
+  PuzzlePiece24Regular,
   Settings24Regular,
 } from "@fluentui/react-icons";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -66,6 +67,7 @@ export function BranchesView({ tab }: BranchesViewProps) {
   const [worktreePath, setWorktreePath] = useState("");
   const [worktreeBranch, setWorktreeBranch] = useState("");
   const [worktreeCreateBranch, setWorktreeCreateBranch] = useState(false);
+  const [submodulesOpen, setSubmodulesOpen] = useState(false);
 
   const branches = useQuery({ queryKey: ["branches", root], queryFn: () => api.repo.getBranches(root) });
   const remotes = useQuery({ queryKey: ["remotes", root], queryFn: () => api.sync.listRemotes(root) });
@@ -84,6 +86,11 @@ export function BranchesView({ tab }: BranchesViewProps) {
     queryFn: () => api.branch.worktrees(root),
     enabled: worktreesOpen,
   });
+  const submodules = useQuery({
+    queryKey: ["submodules", root],
+    queryFn: () => api.repo.getSubmodules(root),
+    enabled: submodulesOpen,
+  });
 
   useEffect(() => {
     setSelectedName("");
@@ -95,6 +102,7 @@ export function BranchesView({ tab }: BranchesViewProps) {
     void queryClient.invalidateQueries({ queryKey: ["history", root] });
     void queryClient.invalidateQueries({ queryKey: ["remotes", root] });
     void queryClient.invalidateQueries({ queryKey: ["worktrees", root] });
+    void queryClient.invalidateQueries({ queryKey: ["submodules", root] });
   };
 
   const run = async (key: string, action: () => Promise<{ message: string }>) => {
@@ -422,6 +430,18 @@ export function BranchesView({ tab }: BranchesViewProps) {
     await run("worktree", () => api.branch.pruneWorktrees(root));
   };
 
+  const openSubmodules = () => {
+    setSubmodulesOpen(true);
+  };
+
+  const updateSubmodule = async (path: string) => {
+    await run("submodule", () => api.repo.updateSubmodule(root, path));
+  };
+
+  const syncSubmodules = async () => {
+    await run("submodule", () => api.repo.syncSubmodules(root));
+  };
+
   const handleCreate = async () => {
     const name = newName.trim();
     if (!name) return;
@@ -573,6 +593,16 @@ export function BranchesView({ tab }: BranchesViewProps) {
                   icon={busy === "push" ? <Spinner size="tiny" /> : <ArrowUpload24Regular />}
                   onClick={handlePush}
                   disabled={!selected || !remoteName || !!busy}
+                />
+              </span>
+              <span className="branch-icon-button" data-tooltip="Submodules">
+                <Button
+                  size="small"
+                  appearance="subtle"
+                  aria-label="Submodules"
+                  icon={<PuzzlePiece24Regular />}
+                  onClick={openSubmodules}
+                  disabled={!!busy}
                 />
               </span>
               <span className="branch-icon-button" data-tooltip="Worktrees">
@@ -895,6 +925,59 @@ export function BranchesView({ tab }: BranchesViewProps) {
                 disabled={!!busy || !remoteFormUrl.trim() || (!editingRemote && !remoteFormName.trim())}
               >
                 {busy === "remote" ? <Spinner size="tiny" /> : editingRemote ? "儲存 URL" : "新增 Remote"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {submodulesOpen ? (
+        <div
+          className="modal-backdrop"
+          onMouseDown={(event) => event.target === event.currentTarget && !busy && setSubmodulesOpen(false)}
+        >
+          <div className="modal small" role="dialog" aria-modal="true" aria-label="Submodules">
+            <div className="modal-header">
+              <h2>Submodules</h2>
+              <Button appearance="subtle" icon={<Dismiss24Regular />} onClick={() => setSubmodulesOpen(false)} disabled={!!busy} />
+            </div>
+            <div className="modal-body form-stack">
+              <div className="remote-list">
+                {(submodules.data || []).map((entry) => (
+                  <div className="remote-row" key={entry.path}>
+                    <div className="remote-copy">
+                      <strong>{entry.path}</strong>
+                      <span>
+                        {entry.status} · {shortOid(entry.oid)}
+                        {entry.describe ? ` · ${entry.describe}` : ""}
+                      </span>
+                    </div>
+                    <Button
+                      size="small"
+                      appearance="subtle"
+                      disabled={!!busy}
+                      onClick={() => void updateSubmodule(entry.path)}
+                    >
+                      更新
+                    </Button>
+                  </div>
+                ))}
+                {(submodules.data || []).length === 0 ? <div className="empty-state">沒有 Submodule</div> : null}
+              </div>
+            </div>
+            <div className="modal-footer">
+              <Button appearance="subtle" onClick={() => void syncSubmodules()} disabled={!!busy}>
+                Sync URLs
+              </Button>
+              <Button appearance="secondary" onClick={() => setSubmodulesOpen(false)} disabled={!!busy}>
+                關閉
+              </Button>
+              <Button
+                appearance="primary"
+                onClick={() => void updateSubmodule("")}
+                disabled={!!busy || (submodules.data || []).length === 0}
+              >
+                {busy === "submodule" ? <Spinner size="tiny" /> : "更新全部"}
               </Button>
             </div>
           </div>

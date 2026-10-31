@@ -19,6 +19,7 @@ import type {
   Settings,
   StashEntry,
   Status,
+  Submodule,
   Tag,
   UndoRecord,
   Worktree,
@@ -251,6 +252,13 @@ export async function mockInvoke<T>(group: string, method: string, args: any[]):
     case "RepoAPI.GetRemotes":
     case "SyncAPI.ListRemotes":
       return [{ name: "origin", fetchUrl: "https://github.com/example/puffgittt.git", pushUrl: "https://github.com/example/puffgittt.git" }] as T;
+    case "RepoAPI.GetSubmodules":
+      return [
+        { path: "vendor/demo", oid: "1234567890abcdef1234567890abcdef12345678", describe: "v1.0.0", status: "clean" },
+      ] as Submodule[] as T;
+    case "RepoAPI.UpdateSubmodule":
+    case "RepoAPI.SyncSubmodules":
+      return ok("Submodules updated") as T;
     case "ChangeAPI.GetDiff":
       return diffFor(args[1], args[2]) as T;
     case "ChangeAPI.Stage":

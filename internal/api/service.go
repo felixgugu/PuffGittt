@@ -309,6 +309,24 @@ func (a *RepoAPI) GetRemotes(root string) ([]model.Remote, error) {
 	return a.s.runnerWithSettings().Remotes(a.s.context(), root)
 }
 
+func (a *RepoAPI) GetSubmodules(root string) ([]model.Submodule, error) {
+	return a.s.runnerWithSettings().Submodules(a.s.context(), root)
+}
+
+func (a *RepoAPI) UpdateSubmodule(root, path string) (model.OperationResult, error) {
+	mu := a.s.repoLock(root)
+	mu.Lock()
+	defer mu.Unlock()
+	return a.s.runnerWithSettings().UpdateSubmodule(a.s.context(), root, path)
+}
+
+func (a *RepoAPI) SyncSubmodules(root string) (model.OperationResult, error) {
+	mu := a.s.repoLock(root)
+	mu.Lock()
+	defer mu.Unlock()
+	return a.s.runnerWithSettings().SyncSubmodules(a.s.context(), root)
+}
+
 func (a *ChangeAPI) GetDiff(root, path, side, revision string) (model.DiffDocument, error) {
 	return a.s.runnerWithSettings().Diff(a.s.context(), root, path, side, revision)
 }

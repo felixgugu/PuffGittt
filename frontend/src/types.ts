@@ -130,6 +130,13 @@ export interface Worktree {
   pruneReason?: string;
 }
 
+export interface Submodule {
+  path: string;
+  oid: string;
+  describe?: string;
+  status: string;
+}
+
 export interface CommitDetail {
   commit: Commit;
   files: CommitFile[];

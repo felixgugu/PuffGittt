@@ -63,6 +63,7 @@ wails build
   and Git command confirmation dialogs.
 - Remote management: add remotes, edit fetch/push URLs and remove remotes.
 - Worktrees: list, add (optionally creating a branch), remove and prune.
+- Submodules: list, update one/all and sync URLs.
 - Sync: fetch, pull, push, force-with-lease push, with Git command previews and
   branch ahead/behind status.
 - Conflicts: conflict list, three-way content, editable result, one-click ours/theirs/both,
