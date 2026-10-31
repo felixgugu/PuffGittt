@@ -58,6 +58,15 @@ func (r *Runner) Diff(ctx context.Context, root, path, side, revision string) (m
 	}
 	doc.OldText = oldText
 	doc.NewText = newText
+	if side == "staged" || side == "unstaged" {
+		if patch, err := r.diffPatch(ctx, repo.RootPath, path, side); err == nil {
+			doc.PatchHash = patch.hash
+			doc.Hunks = make([]model.DiffHunk, 0, len(patch.hunks))
+			for _, hunk := range patch.hunks {
+				doc.Hunks = append(doc.Hunks, hunkToModel(hunk))
+			}
+		}
+	}
 	return doc, nil
 }
 

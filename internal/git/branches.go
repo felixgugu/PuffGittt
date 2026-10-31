@@ -62,16 +62,47 @@ func (r *Runner) Branches(ctx context.Context, root string) ([]model.Branch, err
 	return branches, nil
 }
 
+func CreateBranchArgs(name, startOid string) []string {
+	args := []string{"branch", name}
+	if strings.TrimSpace(startOid) != "" {
+		args = append(args, startOid)
+	}
+	return args
+}
+
+func SwitchBranchArgs(name string) []string {
+	return []string{"switch", name}
+}
+
+func DeleteBranchArgs(name string, force bool) []string {
+	flag := "-d"
+	if force {
+		flag = "-D"
+	}
+	return []string{"branch", flag, name}
+}
+
+func MergeArgs(source, strategy string) []string {
+	args := []string{"merge"}
+	switch strategy {
+	case "no-ff":
+		args = append(args, "--no-ff")
+	case "squash":
+		args = append(args, "--squash")
+	}
+	return append(args, source)
+}
+
+func RebaseArgs(onto string) []string {
+	return []string{"rebase", onto}
+}
+
 func (r *Runner) CreateBranch(ctx context.Context, root, name, startOid string) (model.OperationResult, error) {
 	repo, err := r.Open(ctx, root)
 	if err != nil {
 		return model.OperationResult{}, err
 	}
-	args := []string{"branch", name}
-	if strings.TrimSpace(startOid) != "" {
-		args = append(args, startOid)
-	}
-	out, errOut, err := r.RunBytes(ctx, repo.RootPath, nil, args...)
+	out, errOut, err := r.RunBytes(ctx, repo.RootPath, nil, CreateBranchArgs(name, startOid)...)
 	if err != nil {
 		return model.OperationResult{}, r.OutputError(out, errOut, err)
 	}
@@ -83,7 +114,7 @@ func (r *Runner) SwitchBranch(ctx context.Context, root, name string) (model.Ope
 	if err != nil {
 		return model.OperationResult{}, err
 	}
-	out, errOut, err := r.RunBytes(ctx, repo.RootPath, nil, "switch", name)
+	out, errOut, err := r.RunBytes(ctx, repo.RootPath, nil, SwitchBranchArgs(name)...)
 	if err != nil {
 		return model.OperationResult{}, r.OutputError(out, errOut, err)
 	}
@@ -95,11 +126,7 @@ func (r *Runner) DeleteBranch(ctx context.Context, root, name string, force bool
 	if err != nil {
 		return model.OperationResult{}, err
 	}
-	flag := "-d"
-	if force {
-		flag = "-D"
-	}
-	out, errOut, err := r.RunBytes(ctx, repo.RootPath, nil, "branch", flag, name)
+	out, errOut, err := r.RunBytes(ctx, repo.RootPath, nil, DeleteBranchArgs(name, force)...)
 	if err != nil {
 		return model.OperationResult{}, r.OutputError(out, errOut, err)
 	}
@@ -111,15 +138,7 @@ func (r *Runner) Merge(ctx context.Context, root, source, strategy string) (mode
 	if err != nil {
 		return model.OperationResult{}, err
 	}
-	args := []string{"merge"}
-	switch strategy {
-	case "no-ff":
-		args = append(args, "--no-ff")
-	case "squash":
-		args = append(args, "--squash")
-	}
-	args = append(args, source)
-	out, errOut, err := r.RunBytes(ctx, repo.RootPath, nil, args...)
+	out, errOut, err := r.RunBytes(ctx, repo.RootPath, nil, MergeArgs(source, strategy)...)
 	if err != nil {
 		return model.OperationResult{Success: false, Message: "Merge requires attention", Output: strings.TrimSpace(out + "\n" + errOut)}, r.OutputError(out, errOut, err)
 	}
@@ -131,7 +150,7 @@ func (r *Runner) Rebase(ctx context.Context, root, onto string) (model.Operation
 	if err != nil {
 		return model.OperationResult{}, err
 	}
-	out, errOut, err := r.RunBytes(ctx, repo.RootPath, nil, "rebase", onto)
+	out, errOut, err := r.RunBytes(ctx, repo.RootPath, nil, RebaseArgs(onto)...)
 	if err != nil {
 		return model.OperationResult{Success: false, Message: "Rebase requires attention", Output: strings.TrimSpace(out + "\n" + errOut)}, r.OutputError(out, errOut, err)
 	}

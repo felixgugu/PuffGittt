@@ -1,20 +1,25 @@
 import { mockInvoke } from "./mock";
 import type {
   Branch,
+  CommandPreview,
+  CommandRequest,
   Commit,
   CommitDetail,
   ConflictFile,
   ConflictVersions,
   DiffDocument,
   Environment,
+  HunkSelection,
   OperationResult,
   RecentRepo,
+  ReflogEntry,
   Remote,
   Repository,
   Settings,
   StashEntry,
   Status,
   Tag,
+  UndoRecord,
   WorkspaceRepository,
 } from "../types";
 
@@ -83,6 +88,8 @@ export const api = {
       invoke<DiffDocument>("ChangeAPI", "GetDiff", root, path, side, revision),
     stage: (root: string, paths: string[]) => invoke<OperationResult>("ChangeAPI", "Stage", root, paths),
     unstage: (root: string, paths: string[]) => invoke<OperationResult>("ChangeAPI", "Unstage", root, paths),
+    applyHunks: (root: string, path: string, side: string, patchHash: string, selections: HunkSelection[]) =>
+      invoke<OperationResult>("ChangeAPI", "ApplyHunks", root, path, side, patchHash, selections),
     discard: (root: string, paths: string[]) => invoke<OperationResult>("ChangeAPI", "Discard", root, paths),
   },
   commit: {
@@ -93,6 +100,18 @@ export const api = {
     list: (root: string, branch: string, all: boolean, limit: number, search: string) =>
       invoke<Commit[]>("HistoryAPI", "List", root, branch, all, limit, search),
     getCommit: (root: string, oid: string) => invoke<CommitDetail>("HistoryAPI", "GetCommit", root, oid),
+    preview: (root: string, request: CommandRequest) =>
+      invoke<CommandPreview>("HistoryAPI", "Preview", root, request),
+    reset: (root: string, oid: string, mode: string) =>
+      invoke<OperationResult>("HistoryAPI", "Reset", root, oid, mode),
+    revert: (root: string, oid: string) =>
+      invoke<OperationResult>("HistoryAPI", "Revert", root, oid),
+    drop: (root: string, oid: string) =>
+      invoke<OperationResult>("HistoryAPI", "Drop", root, oid),
+    reflog: (root: string, limit: number) =>
+      invoke<ReflogEntry[]>("HistoryAPI", "Reflog", root, limit),
+    undoInfo: (root: string) => invoke<UndoRecord>("HistoryAPI", "UndoInfo", root),
+    undo: (root: string) => invoke<OperationResult>("HistoryAPI", "Undo", root),
   },
   branch: {
     list: (root: string) => invoke<Branch[]>("BranchAPI", "List", root),
@@ -104,6 +123,8 @@ export const api = {
     merge: (root: string, source: string, strategy: string) =>
       invoke<OperationResult>("BranchAPI", "Merge", root, source, strategy),
     rebase: (root: string, onto: string) => invoke<OperationResult>("BranchAPI", "Rebase", root, onto),
+    preview: (root: string, request: CommandRequest) =>
+      invoke<CommandPreview>("BranchAPI", "Preview", root, request),
   },
   sync: {
     listRemotes: (root: string) => invoke<Remote[]>("SyncAPI", "ListRemotes", root),
@@ -112,6 +133,8 @@ export const api = {
       invoke<OperationResult>("SyncAPI", "Pull", root, remote, branch, strategy),
     push: (root: string, remote: string, branch: string) =>
       invoke<OperationResult>("SyncAPI", "Push", root, remote, branch),
+    preview: (root: string, request: CommandRequest) =>
+      invoke<CommandPreview>("SyncAPI", "Preview", root, request),
   },
   conflict: {
     list: (root: string) => invoke<ConflictFile[]>("ConflictAPI", "List", root),

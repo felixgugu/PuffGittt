@@ -6,7 +6,7 @@
 
 PuffGittt is a Windows-first Git workspace built with **Go + Wails v2**, **React 19**, **TypeScript**, **Vite**, **Fluent UI v9** and **Monaco Editor**. The interface is primarily Traditional Chinese; English is used for Git terminology and tooltips.
 
-The product brief lives in [git-workspace-development-spec.md](git-workspace-development-spec.md).
+The product brief lives in [git-workspace-development-spec.md](git-workspace-development-spec.md)..
 
 ## Run
 
@@ -41,36 +41,46 @@ wails build
 ## Implemented in this build
 
 - Multi-repository tabs with a Welcome experience: open, clone, init, recent repositories.
-- Changes workspace: directory filter tree, commit composer and untracked tree in a
-  resizable left column with a full-height Monaco diff; stage/unstage, discard,
-  amend, inline/split diff.
+- Remembers the last active repository and view between launches.
+- Changes workspace: directory filter tree, flat/tree modes, tabs for tracked and
+  untracked files, checkbox-driven stage/unstage/discard, hunk and line-level
+  stage/unstage with patch-hash validation, commit composer and a full-height
+  Monaco diff; also a shared maximized diff dialog with previous/next file
+  navigation.
 - History: branch filter, commit search, virtualized commit list, SVG lane graph,
-  commit details, changed files and commit diff.
-- Branches: local and remote lists, create, switch, delete, merge.
-- Sync: fetch, pull, push, with branch ahead/behind status.
+  resizable commit details/changed files, tree/flat changed-file modes, commit diff
+  dialog, create branch/tag, copy OID, reset, revert and drop commit, all through a
+  right-click context menu with Git command previews.
+- Branches: local and remote lists, create, switch, merge, rebase and delete through
+  a right-click context menu, with merge/rebase direction labels and Git command
+  confirmation dialogs.
+- Sync: fetch, pull, push, with Git command previews and branch ahead/behind status.
 - Conflicts: conflict list, three-way content, editable result, mark resolved,
   continue/abort for in-progress operations.
 - Stashes: list, create, apply, pop, drop.
+- Tags: list, create lightweight/annotated tags and delete tags.
 - Settings: theme, language, base font size and family, projects folder,
   Git executable path, commit identity, and About/environment versions.
-- Frameless window with an integrated title bar; collapsible sidebar with a
-  projects/recent repository list pinned at the bottom.
+- Frameless window with an integrated title bar; collapsible/resizable sidebar with
+  a resizable merged project list.
 - Traditional Chinese / English UI, warm light/dark theme tokens and scalable typography.
 - Windows application icon generated from `appicon.png`.
 
 ## Not implemented yet
 
-See [docs/implementation-status.md](docs/implementation-status.md) for the detailed gap list.
+See [docs/implementation-status.md](docs/implementation-status.md) for the detailed gap list,
+and [docs/roadmap.md](docs/roadmap.md) for the SmartGit / SourceTree benchmark and priorities.
+
 Highlights:
 
-- Partial hunk/line staging and hunk-level unstage (only whole-file staging is wired in the UI).
-- Discard backups/undo, encoding/CRLF special handling, submodule-aware discard.
 - Filesystem watcher; current refresh is manual or 10-second status polling.
 - Background task queue, progress events, cancellation and operation locks beyond the in-process mutex.
-- Interactive rebase, cherry-pick, revert, blame, file history, image diff, worktrees, submodules and LFS.
-- Terminal/ConPTY, tags UI, remote configuration UI, force-with-lease push flow, SSH host-key UI.
-- Draft persistence, backup retention, high-contrast theme and full keyboard navigation.
-- Installer/packaging, code signing, updater and diagnostics export.
+- Interactive rebase, cherry-pick, blame, file history, image diff, worktrees, submodules and LFS.
+- Remote configuration UI, force-with-lease push flow, SSH host-key UI and credential prompts.
+- Branch rename, set upstream, publish branch, checkout remote branch and branch compare.
+- Tags push / remote tag management and signed tags.
+- Terminal/ConPTY, Git Flow, provider integrations and custom actions.
+- Draft persistence, backup retention, diagnostics export, installer, code signing and updater.
 
 ## Project layout
 

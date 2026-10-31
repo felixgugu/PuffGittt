@@ -1,16 +1,5 @@
-import { useEffect, useMemo, useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from "react";
-import {
-  Badge,
-  Button,
-  FluentProvider,
-  Select,
-  Spinner,
-} from "@fluentui/react-components";
-import {
-  ArrowDownload24Regular,
-  ArrowSync24Regular,
-  ArrowUpload24Regular,
-} from "@fluentui/react-icons";
+import { useEffect, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from "react";
+import { FluentProvider, Spinner } from "@fluentui/react-components";
 import { useTranslation } from "react-i18next";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import i18n from "./i18n";
@@ -21,6 +10,7 @@ import { WelcomeView } from "./views/WelcomeView";
 import { ChangesView } from "./views/ChangesView";
 import { HistoryView } from "./views/HistoryView";
 import { BranchesView } from "./views/BranchesView";
+import { TagsView } from "./views/TagsView";
 import { ConflictsView } from "./views/ConflictsView";
 import { StashesView } from "./views/StashesView";
 import { SettingsPanel } from "./components/SettingsPanel";
@@ -38,6 +28,13 @@ function useSystemDark(): boolean {
     return () => media.removeEventListener("change", handler);
   }, []);
   return dark;
+}
+
+const BASE_FONT_SIZE = 14;
+const ROOT_FONT_SIZE = 16;
+
+function rootFontSize(base: number): string {
+  return `${(base / BASE_FONT_SIZE) * ROOT_FONT_SIZE}px`;
 }
 
 export default function App() {
@@ -61,11 +58,14 @@ export default function App() {
   const closeTab = useAppStore((state) => state.closeTab);
   const openTab = useAppStore((state) => state.openTab);
   const setView = useAppStore((state) => state.setView);
+  const lastRepoPath = useAppStore((state) => state.lastRepoPath);
+  const lastView = useAppStore((state) => state.lastView);
   const activeTab = useActiveTab();
   const queryClient = useQueryClient();
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [busy, setBusy] = useState<string | null>(null);
   const [maximized, setMaximized] = useState(false);
+  const [restoring, setRestoring] = useState(() => !!lastRepoPath);
+  const restoreRef = useRef(false);
   const [sidebarWidth, setSidebarWidth] = useState(() => {
     const stored = Number(localStorage.getItem("puffgittt:sidebarWidth"));
     return Number.isFinite(stored) && stored >= 200 && stored <= 320 ? stored : 240;
@@ -80,11 +80,6 @@ export default function App() {
     queryFn: () => api.repo.getStatus(root!),
     enabled: !!root,
     refetchInterval: 10_000,
-  });
-  const branchesQuery = useQuery({
-    queryKey: ["branches", root],
-    queryFn: () => api.repo.getBranches(root!),
-    enabled: !!root,
   });
   const workspaceQuery = useQuery({
     queryKey: ["workspaceRepositories", settings?.projectsRoot],
@@ -105,7 +100,7 @@ export default function App() {
   useEffect(() => {
     document.documentElement.dataset.theme = dark ? "dark" : "light";
     document.documentElement.style.colorScheme = dark ? "dark" : "light";
-    document.documentElement.style.setProperty("--base-font-size", `${baseFontSize}px`);
+    document.documentElement.style.fontSize = rootFontSize(baseFontSize);
     const family = settings?.fontFamily?.trim();
     if (family) {
       document.documentElement.style.setProperty("--font-app", `"${family}", var(--font-ui)`);
@@ -130,7 +125,10 @@ export default function App() {
     if (!target) return;
     void queryClient.invalidateQueries({ queryKey: ["status", target] });
     void queryClient.invalidateQueries({ queryKey: ["branches", target] });
+    void queryClient.invalidateQueries({ queryKey: ["tags", target] });
     void queryClient.invalidateQueries({ queryKey: ["history", target] });
+    void queryClient.invalidateQueries({ queryKey: ["reflog", target] });
+    void queryClient.invalidateQueries({ queryKey: ["undo", target] });
     void queryClient.invalidateQueries({ queryKey: ["conflicts", target] });
     void queryClient.invalidateQueries({ queryKey: ["stashes", target] });
     void queryClient.invalidateQueries({ queryKey: ["remotes", target] });
@@ -163,40 +161,23 @@ export default function App() {
     }
   };
 
-  const handleSync = async (kind: "fetch" | "pull" | "push") => {
-    if (!root || !activeTab) return;
-    const branch = status?.repo.branch || activeTab.repo.branch || "";
-    setBusy(kind);
-    try {
-      const remote = status?.repo.upstream?.split("/")[0] || "origin";
-      const result =
-        kind === "fetch"
-          ? await api.sync.fetch(root, remote)
-          : kind === "pull"
-            ? await api.sync.pull(root, remote, branch, "merge")
-            : await api.sync.push(root, remote, branch);
-      setStatusMessage(result.output || result.message);
-      invalidateRepo();
-    } catch (error: any) {
-      setStatusMessage(error?.message || String(error));
-    } finally {
-      setBusy(null);
-    }
-  };
-
-  const handleSwitchBranch = async (name: string) => {
-    if (!root || !name) return;
-    setBusy("branch");
-    try {
-      const result = await api.branch.switch(root, name);
-      setStatusMessage(result.message);
-      invalidateRepo();
-    } catch (error: any) {
-      setStatusMessage(error?.message || String(error));
-    } finally {
-      setBusy(null);
-    }
-  };
+  useEffect(() => {
+    if (restoreRef.current || !lastRepoPath) return;
+    restoreRef.current = true;
+    void (async () => {
+      try {
+        const repo = await api.app.openRepository(lastRepoPath);
+        openTab(repo);
+        if (lastView) setView(repo.rootPath, lastView);
+        invalidateRepo(repo.rootPath);
+      } catch (error: any) {
+        useAppStore.setState({ lastRepoPath: undefined, lastView: undefined });
+        setStatusMessage(`無法開啟上次使用的儲存庫：${error?.message || error}`);
+      } finally {
+        setRestoring(false);
+      }
+    })();
+  }, [lastRepoPath, lastView]);
 
   const handleSaveSettings = async (next: Settings) => {
     try {
@@ -264,11 +245,6 @@ export default function App() {
     return () => window.removeEventListener("keydown", onKeyDown);
   });
 
-  const localBranches = useMemo(
-    () => (branchesQuery.data || []).filter((branch) => branch.kind === "local"),
-    [branchesQuery.data],
-  );
-
   return (
     <FluentProvider theme={dark ? puffDarkTheme : puffLightTheme} className="app-provider">
       <div
@@ -291,95 +267,29 @@ export default function App() {
             }}
             onClose={() => void api.window.close()}
           />
+        </div>
 
+        <div className="app-body">
+          <Sidebar
+            activeTab={activeTab}
+            collapsed={sidebarCollapsed}
+            branch={status?.repo.branch || activeTab?.repo.branch || ""}
+            repositories={workspaceQuery.data || []}
+            changeCount={status?.files.length || 0}
+            hasConflicts={!!status?.files.some((file) => file.kind === "conflicted")}
+            onToggle={() => setSidebarCollapsed(!sidebarCollapsed)}
+            onNavigate={(view) => activeTab && setView(activeTab.repo.rootPath, view)}
+            onOpenRepository={(path) => void openPath(path)}
+            onOpenProjects={handleOpenProjectsFolder}
+          />
+          {!sidebarCollapsed ? (
+            <div className="sidebar-resizer" onPointerDown={beginSidebarResize} role="separator" aria-orientation="vertical" />
+          ) : null}
 
-          {activeTab ? (
-            <div className="command-bar">
-              <div className="command-group">
-                <span className="field-label">{t("toolbar.branch")}</span>
-                <Select
-                  className="branch-select"
-                  value={status?.repo.branch || activeTab.repo.branch || ""}
-                  disabled={!localBranches.length || busy === "branch"}
-                  onChange={(_, data) => void handleSwitchBranch(data.value)}
-                >
-                  {localBranches.map((branch) => (
-                    <option key={branch.name} value={branch.name}>
-                      {branch.name}
-                      {branch.current ? "  ✓" : ""}
-                    </option>
-                  ))}
-                </Select>
-              </div>
-              <div className="command-group">
-                <Button
-                  appearance="subtle"
-                  icon={busy === "fetch" ? <Spinner size="tiny" /> : <ArrowDownload24Regular />}
-                  onClick={() => void handleSync("fetch")}
-                  disabled={!!busy}
-                >
-                  Fetch
-                </Button>
-                <Button
-                  appearance="subtle"
-                  icon={busy === "pull" ? <Spinner size="tiny" /> : <ArrowSync24Regular />}
-                  onClick={() => void handleSync("pull")}
-                  disabled={!!busy}
-                >
-                  Pull
-                  {status && status.behind > 0 ? <Badge appearance="filled" size="small">{status.behind}</Badge> : null}
-                </Button>
-                <Button
-                  appearance="subtle"
-                  icon={busy === "push" ? <Spinner size="tiny" /> : <ArrowUpload24Regular />}
-                  onClick={() => void handleSync("push")}
-                  disabled={!!busy}
-                >
-                  Push
-                  {status && status.ahead > 0 ? <Badge appearance="filled" size="small">{status.ahead}</Badge> : null}
-                </Button>
-                <Button
-                  appearance="subtle"
-                  icon={<ArrowSync24Regular />}
-                  title={t("toolbar.refresh")}
-                onClick={() => invalidateRepo()}
-              />
-            </div>
-            <div className="command-spacer" />
-            <div className="command-status">
-              {status ? (
-                <>
-                  <Badge appearance="tint" color="informative">{status.repo.branch || "HEAD"}</Badge>
-                  <span>{status.files.length} {t("status.changed")}</span>
-                  {status.repo.operation !== "normal" ? (
-                    <Badge appearance="tint" color="warning">{status.repo.operation}</Badge>
-                  ) : null}
-                </>
-              ) : null}
-              {statusQuery.isFetching ? <Spinner size="tiny" /> : null}
-            </div>
-          </div>
-        ) : null}
-          </div>
-
-          <div className="app-body">
-            <Sidebar
-              activeTab={activeTab}
-              collapsed={sidebarCollapsed}
-              repositories={workspaceQuery.data || []}
-              changeCount={status?.files.length || 0}
-              hasConflicts={!!status?.files.some((file) => file.kind === "conflicted")}
-              onToggle={() => setSidebarCollapsed(!sidebarCollapsed)}
-              onNavigate={(view) => activeTab && setView(activeTab.repo.rootPath, view)}
-              onOpenRepository={(path) => void openPath(path)}
-              onOpenProjects={handleOpenProjectsFolder}
-            />
-            {!sidebarCollapsed ? (
-              <div className="sidebar-resizer" onPointerDown={beginSidebarResize} role="separator" aria-orientation="vertical" />
-            ) : null}
-
-            <main className="workspace">
-            {!activeTab ? (
+          <main className="workspace">
+            {restoring ? (
+              <div className="center-state"><Spinner label={t("common.loading")} /></div>
+            ) : !activeTab ? (
               <WelcomeView
                 onOpen={handleOpenFolder}
                 onRepoOpened={openRepository}
@@ -392,13 +302,15 @@ export default function App() {
               <HistoryView tab={activeTab} />
             ) : activeTab.view === "branches" ? (
               <BranchesView tab={activeTab} />
+            ) : activeTab.view === "tags" ? (
+              <TagsView tab={activeTab} />
             ) : activeTab.view === "conflicts" ? (
               <ConflictsView tab={activeTab} />
             ) : (
               <StashesView tab={activeTab} />
             )}
-            </main>
-          </div>
+          </main>
+        </div>
 
         <StatusBar status={status} language={language} message={statusMessage} />
       </div>
@@ -418,7 +330,7 @@ export default function App() {
             setNativeTheme(next);
           }}
           onFontSizeChange={(next) => {
-            document.documentElement.style.setProperty("--base-font-size", `${next}px`);
+            document.documentElement.style.fontSize = rootFontSize(next);
           }}
         />
       ) : null}

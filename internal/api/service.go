@@ -9,6 +9,7 @@ import (
 	"sort"
 	"strings"
 	"sync"
+	"time"
 
 	wailsruntime "github.com/wailsapp/wails/v2/pkg/runtime"
 
@@ -24,10 +25,12 @@ type Service struct {
 	ctx    context.Context
 	mu     sync.RWMutex
 	locks  sync.Map
+	undoMu sync.Mutex
+	undo   map[string]model.UndoRecord
 }
 
 func New(cfg *config.Config) *Service {
-	return &Service{cfg: cfg, runner: git.NewRunner()}
+	return &Service{cfg: cfg, runner: git.NewRunner(), undo: map[string]model.UndoRecord{}}
 }
 
 func (s *Service) SetContext(ctx context.Context) { s.ctx = ctx }
@@ -48,6 +51,77 @@ func (s *Service) repoLock(root string) *sync.Mutex {
 func (s *Service) runnerWithSettings() *git.Runner {
 	settings := s.cfg.LoadSettings()
 	return s.runner.WithPath(settings.GitPath)
+}
+
+func undoKey(root string) string {
+	return strings.ToLower(strings.ReplaceAll(strings.TrimSpace(root), "\\", "/"))
+}
+
+func (s *Service) headOid(root string) string {
+	head, err := s.runnerWithSettings().HeadOid(s.context(), root)
+	if err != nil {
+		return ""
+	}
+	return head
+}
+
+func (s *Service) recordUndo(root, operation, beforeOid string) {
+	if strings.TrimSpace(beforeOid) == "" {
+		return
+	}
+	afterOid := s.headOid(root)
+	if afterOid == "" || afterOid == beforeOid {
+		return
+	}
+	s.undoMu.Lock()
+	defer s.undoMu.Unlock()
+	s.undo[undoKey(root)] = model.UndoRecord{
+		Operation: operation,
+		BeforeOid: beforeOid,
+		AfterOid:  afterOid,
+		Time:      time.Now().Format(time.RFC3339),
+	}
+}
+
+func (s *Service) UndoInfo(root string) model.UndoRecord {
+	s.undoMu.Lock()
+	defer s.undoMu.Unlock()
+	return s.undo[undoKey(root)]
+}
+
+func (s *Service) Undo(root string) (model.OperationResult, error) {
+	record := s.UndoInfo(root)
+	if strings.TrimSpace(record.BeforeOid) == "" {
+		return model.OperationResult{}, fmt.Errorf("沒有可復原的操作")
+	}
+	runner := s.runnerWithSettings()
+	status, err := runner.Status(s.context(), root)
+	if err != nil {
+		return model.OperationResult{}, err
+	}
+	if status.Repo.Operation != "normal" {
+		return model.OperationResult{}, fmt.Errorf("有進行中的 Git 操作，無法復原")
+	}
+	if head := s.headOid(root); head == "" || head != record.AfterOid {
+		return model.OperationResult{}, fmt.Errorf("目前 HEAD 已改變，無法復原上一次操作")
+	}
+	for _, file := range status.Files {
+		if file.IndexStatus == "?" {
+			continue
+		}
+		if file.IndexStatus != "." || file.WorktreeStatus != "." {
+			return model.OperationResult{}, fmt.Errorf("工作區必須乾淨才能復原")
+		}
+	}
+	result, err := runner.ResetCommit(s.context(), root, record.BeforeOid, "hard")
+	if err != nil {
+		return model.OperationResult{}, err
+	}
+	s.undoMu.Lock()
+	delete(s.undo, undoKey(root))
+	s.undoMu.Unlock()
+	result.Message = "已復原上一次操作"
+	return result, nil
 }
 
 type AppAPI struct{ s *Service }
@@ -236,6 +310,13 @@ func (a *ChangeAPI) Unstage(root string, paths []string) (model.OperationResult,
 	return a.s.runnerWithSettings().Unstage(a.s.context(), root, paths)
 }
 
+func (a *ChangeAPI) ApplyHunks(root, path, side, patchHash string, selections []model.HunkSelection) (model.OperationResult, error) {
+	mu := a.s.repoLock(root)
+	mu.Lock()
+	defer mu.Unlock()
+	return a.s.runnerWithSettings().ApplyHunks(a.s.context(), root, path, side, patchHash, selections)
+}
+
 func (a *ChangeAPI) Discard(root string, paths []string) (model.OperationResult, error) {
 	mu := a.s.repoLock(root)
 	mu.Lock()
@@ -258,6 +339,61 @@ func (a *HistoryAPI) List(root, branch string, all bool, limit int, search strin
 
 func (a *HistoryAPI) GetCommit(root, oid string) (model.CommitDetail, error) {
 	return a.s.runnerWithSettings().CommitDetail(a.s.context(), root, oid)
+}
+
+func (a *HistoryAPI) Preview(root string, req model.CommandRequest) (model.CommandPreview, error) {
+	return a.s.runnerWithSettings().PreviewHistoryCommand(a.s.context(), root, req)
+}
+
+func (a *HistoryAPI) Reset(root, oid, mode string) (model.OperationResult, error) {
+	mu := a.s.repoLock(root)
+	mu.Lock()
+	defer mu.Unlock()
+	before := a.s.headOid(root)
+	result, err := a.s.runnerWithSettings().ResetCommit(a.s.context(), root, oid, mode)
+	if err == nil {
+		a.s.recordUndo(root, "Reset ("+mode+")", before)
+	}
+	return result, err
+}
+
+func (a *HistoryAPI) Revert(root, oid string) (model.OperationResult, error) {
+	mu := a.s.repoLock(root)
+	mu.Lock()
+	defer mu.Unlock()
+	before := a.s.headOid(root)
+	result, err := a.s.runnerWithSettings().RevertCommit(a.s.context(), root, oid)
+	if err == nil {
+		a.s.recordUndo(root, "Revert", before)
+	}
+	return result, err
+}
+
+func (a *HistoryAPI) Drop(root, oid string) (model.OperationResult, error) {
+	mu := a.s.repoLock(root)
+	mu.Lock()
+	defer mu.Unlock()
+	before := a.s.headOid(root)
+	result, err := a.s.runnerWithSettings().DropCommit(a.s.context(), root, oid)
+	if err == nil {
+		a.s.recordUndo(root, "Drop", before)
+	}
+	return result, err
+}
+
+func (a *HistoryAPI) Reflog(root string, limit int) ([]model.ReflogEntry, error) {
+	return a.s.runnerWithSettings().Reflog(a.s.context(), root, limit)
+}
+
+func (a *HistoryAPI) UndoInfo(root string) model.UndoRecord {
+	return a.s.UndoInfo(root)
+}
+
+func (a *HistoryAPI) Undo(root string) (model.OperationResult, error) {
+	mu := a.s.repoLock(root)
+	mu.Lock()
+	defer mu.Unlock()
+	return a.s.Undo(root)
 }
 
 func (a *BranchAPI) List(root string) ([]model.Branch, error) {
@@ -289,14 +425,28 @@ func (a *BranchAPI) Merge(root, source, strategy string) (model.OperationResult,
 	mu := a.s.repoLock(root)
 	mu.Lock()
 	defer mu.Unlock()
-	return a.s.runnerWithSettings().Merge(a.s.context(), root, source, strategy)
+	before := a.s.headOid(root)
+	result, err := a.s.runnerWithSettings().Merge(a.s.context(), root, source, strategy)
+	if err == nil {
+		a.s.recordUndo(root, "Merge", before)
+	}
+	return result, err
 }
 
 func (a *BranchAPI) Rebase(root, onto string) (model.OperationResult, error) {
 	mu := a.s.repoLock(root)
 	mu.Lock()
 	defer mu.Unlock()
-	return a.s.runnerWithSettings().Rebase(a.s.context(), root, onto)
+	before := a.s.headOid(root)
+	result, err := a.s.runnerWithSettings().Rebase(a.s.context(), root, onto)
+	if err == nil {
+		a.s.recordUndo(root, "Rebase", before)
+	}
+	return result, err
+}
+
+func (a *BranchAPI) Preview(root string, req model.CommandRequest) (model.CommandPreview, error) {
+	return a.s.runnerWithSettings().PreviewBranchCommand(a.s.context(), root, req)
 }
 
 func (a *SyncAPI) ListRemotes(root string) ([]model.Remote, error) {
@@ -322,6 +472,10 @@ func (a *SyncAPI) Push(root, remote, branch string) (model.OperationResult, erro
 	mu.Lock()
 	defer mu.Unlock()
 	return a.s.runnerWithSettings().Push(a.s.context(), root, remote, branch)
+}
+
+func (a *SyncAPI) Preview(root string, req model.CommandRequest) (model.CommandPreview, error) {
+	return a.s.runnerWithSettings().PreviewSyncCommand(a.s.context(), root, req)
 }
 
 func (a *ConflictAPI) List(root string) ([]model.ConflictFile, error) {

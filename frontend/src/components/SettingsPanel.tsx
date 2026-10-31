@@ -4,13 +4,12 @@ import {
   Button,
   Divider,
   Field,
-  Input,
-  Select,
   Slider,
 } from "@fluentui/react-components";
 import { Dismiss24Regular, FolderOpen24Regular } from "@fluentui/react-icons";
 import { useTranslation } from "react-i18next";
 import { api } from "../bridge/api";
+import { UnderlineInput, UnderlineSelect } from "./FormControls";
 import type { Environment, Settings } from "../types";
 
 interface SettingsPanelProps {
@@ -76,7 +75,7 @@ export function SettingsPanel({
             <h3>{t("settings.appearance")}</h3>
             <div className="form-grid">
               <Field label={t("settings.theme")}>
-                <Select
+                <UnderlineSelect
                   value={draft.theme}
                   onChange={(_, data) => {
                     const next = data.value as Settings["theme"];
@@ -87,10 +86,10 @@ export function SettingsPanel({
                   <option value="system">{t("settings.system")}</option>
                   <option value="light">{t("settings.light")}</option>
                   <option value="dark">{t("settings.dark")}</option>
-                </Select>
+                </UnderlineSelect>
               </Field>
               <Field label={t("settings.language")}>
-                <Select
+                <UnderlineSelect
                   value={draft.language}
                   onChange={(_, data) => {
                     const next = data.value as Settings["language"];
@@ -100,7 +99,7 @@ export function SettingsPanel({
                 >
                   <option value="zh-TW">繁體中文</option>
                   <option value="en">English</option>
-                </Select>
+                </UnderlineSelect>
               </Field>
               <Field label={`${t("settings.fontSize")} (${draft.baseFontSize}px)`} hint={t("settings.fontSizeHint")}>
                 <Slider
@@ -115,7 +114,7 @@ export function SettingsPanel({
                 />
               </Field>
               <Field label={t("settings.fontFamily")}>
-                <Input
+                <UnderlineInput
                   value={draft.fontFamily}
                   placeholder="Segoe UI Variable Text"
                   onChange={(_, data) => update("fontFamily", data.value)}
@@ -130,7 +129,7 @@ export function SettingsPanel({
             <h3>{t("settings.projects")}</h3>
             <Field label={t("settings.projectsRoot")} hint={t("settings.projectsHint")}>
               <div className="input-with-button">
-                <Input value={draft.projectsRoot} onChange={(_, data) => update("projectsRoot", data.value)} />
+                <UnderlineInput value={draft.projectsRoot} onChange={(_, data) => update("projectsRoot", data.value)} />
                 <Button icon={<FolderOpen24Regular />} onClick={() => void pickProjectsRoot()}>
                   {t("settings.browse")}
                 </Button>
@@ -143,7 +142,7 @@ export function SettingsPanel({
           <section className="settings-section">
             <h3>{t("settings.git")}</h3>
             <Field label={t("settings.gitPath")} hint={t("settings.gitPathHint")}>
-              <Input
+              <UnderlineInput
                 value={draft.gitPath}
                 placeholder="git.exe"
                 onChange={(_, data) => update("gitPath", data.value)}
@@ -163,10 +162,10 @@ export function SettingsPanel({
             <h3>{t("settings.identity")}</h3>
             <div className="form-grid">
               <Field label={t("settings.authorName")}>
-                <Input value={draft.authorName} onChange={(_, data) => update("authorName", data.value)} />
+                <UnderlineInput value={draft.authorName} onChange={(_, data) => update("authorName", data.value)} />
               </Field>
               <Field label={t("settings.authorEmail")}>
-                <Input value={draft.authorEmail} onChange={(_, data) => update("authorEmail", data.value)} />
+                <UnderlineInput value={draft.authorEmail} onChange={(_, data) => update("authorEmail", data.value)} />
               </Field>
             </div>
           </section>

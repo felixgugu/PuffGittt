@@ -29,6 +29,28 @@ export interface Status {
   behind: number;
 }
 
+export interface DiffLine {
+  kind: "context" | "add" | "delete";
+  text: string;
+  oldLine: number;
+  newLine: number;
+  noNewline?: boolean;
+}
+
+export interface DiffHunk {
+  header: string;
+  oldStart: number;
+  oldCount: number;
+  newStart: number;
+  newCount: number;
+  lines: DiffLine[];
+}
+
+export interface HunkSelection {
+  hunk: number;
+  lines: number[];
+}
+
 export interface DiffDocument {
   path: string;
   side: string;
@@ -37,6 +59,8 @@ export interface DiffDocument {
   language: string;
   binary: boolean;
   truncated: boolean;
+  hunks?: DiffHunk[];
+  patchHash?: string;
 }
 
 export interface Commit {
@@ -159,4 +183,37 @@ export interface OperationResult {
   success: boolean;
   message: string;
   output?: string;
+}
+
+export interface CommandRequest {
+  action: string;
+  source?: string;
+  target?: string;
+  strategy?: string;
+  name?: string;
+  startPoint?: string;
+  remote?: string;
+  branch?: string;
+  force?: boolean;
+}
+
+export interface CommandPreview {
+  command: string;
+  destructive: boolean;
+}
+
+export interface ReflogEntry {
+  selector: string;
+  oid: string;
+  previousOid?: string;
+  action: string;
+  message: string;
+  date: string;
+}
+
+export interface UndoRecord {
+  operation: string;
+  beforeOid: string;
+  afterOid?: string;
+  time: string;
 }

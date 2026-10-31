@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Button, Field, Input, Spinner } from "@fluentui/react-components";
+import { Button, Field, Spinner } from "@fluentui/react-components";
 import {
   Add24Regular,
   ArrowDownload24Regular,
@@ -10,6 +10,7 @@ import {
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { api } from "../bridge/api";
+import { UnderlineInput } from "../components/FormControls";
 import { useAppStore, type RepoTab } from "../store";
 import { formatDate, shortOid } from "../lib/format";
 
@@ -58,20 +59,16 @@ export function StashesView({ tab }: StashesViewProps) {
 
   return (
     <div className="stashes-view">
-      <div className="view-header">
-        <div>
-          <h1>{t("stashes.title")}</h1>
-          <p>{root}</p>
-        </div>
-        <div className="view-header-actions">
-          <Button appearance="primary" icon={<Add24Regular />} onClick={() => setCreateOpen(true)}>
-            {t("stashes.create")}
-          </Button>
-        </div>
-      </div>
-
       <div className="panel-card stashes-card">
-        <div className="panel-heading"><span>{t("stashes.title")}</span><span className="muted">{stashes.data?.length || 0}</span></div>
+        <div className="panel-heading">
+          <span>{t("stashes.title")}</span>
+          <div className="panel-heading-actions">
+            <span className="muted">{stashes.data?.length || 0}</span>
+            <Button size="small" appearance="primary" icon={<Add24Regular />} onClick={() => setCreateOpen(true)}>
+              {t("stashes.create")}
+            </Button>
+          </div>
+        </div>
         {stashes.isLoading ? <div className="center-state"><Spinner label={t("common.loading")} /></div> : null}
         {stashes.data?.length === 0 ? <div className="empty-state">{t("stashes.empty")}</div> : null}
         {stashes.data?.map((entry) => (
@@ -119,7 +116,7 @@ export function StashesView({ tab }: StashesViewProps) {
             </div>
             <div className="modal-body form-stack">
               <Field label={t("stashes.message")}>
-                <Input value={message} onChange={(_, data) => setMessage(data.value)} />
+                <UnderlineInput value={message} onChange={(_, data) => setMessage(data.value)} />
               </Field>
               <label className="checkbox-line">
                 <input type="checkbox" checked={includeUntracked} onChange={(event) => setIncludeUntracked(event.target.checked)} />

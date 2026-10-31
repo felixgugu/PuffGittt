@@ -43,27 +43,15 @@ func (r *Runner) Remotes(ctx context.Context, root string) ([]model.Remote, erro
 	return result, nil
 }
 
-func (r *Runner) Fetch(ctx context.Context, root, remote string) (model.OperationResult, error) {
-	repo, err := r.Open(ctx, root)
-	if err != nil {
-		return model.OperationResult{}, err
-	}
+func FetchArgs(remote string) []string {
 	args := []string{"fetch", "--progress"}
 	if strings.TrimSpace(remote) != "" {
 		args = append(args, remote)
 	}
-	out, errOut, err := r.RunBytes(ctx, repo.RootPath, nil, args...)
-	if err != nil {
-		return model.OperationResult{Success: false, Message: "Fetch failed", Output: strings.TrimSpace(out + "\n" + errOut)}, r.OutputError(out, errOut, err)
-	}
-	return model.OperationResult{Success: true, Message: "Fetch complete", Output: strings.TrimSpace(out + "\n" + errOut)}, nil
+	return args
 }
 
-func (r *Runner) Pull(ctx context.Context, root, remote, branch, strategy string) (model.OperationResult, error) {
-	repo, err := r.Open(ctx, root)
-	if err != nil {
-		return model.OperationResult{}, err
-	}
+func PullArgs(remote, branch, strategy string) []string {
 	args := []string{"pull"}
 	switch strategy {
 	case "rebase":
@@ -79,7 +67,38 @@ func (r *Runner) Pull(ctx context.Context, root, remote, branch, strategy string
 			args = append(args, branch)
 		}
 	}
-	out, errOut, err := r.RunBytes(ctx, repo.RootPath, nil, args...)
+	return args
+}
+
+func PushArgs(remote, branch string) []string {
+	args := []string{"push", "--progress"}
+	if strings.TrimSpace(remote) != "" {
+		args = append(args, remote)
+		if strings.TrimSpace(branch) != "" {
+			args = append(args, branch)
+		}
+	}
+	return args
+}
+
+func (r *Runner) Fetch(ctx context.Context, root, remote string) (model.OperationResult, error) {
+	repo, err := r.Open(ctx, root)
+	if err != nil {
+		return model.OperationResult{}, err
+	}
+	out, errOut, err := r.RunBytes(ctx, repo.RootPath, nil, FetchArgs(remote)...)
+	if err != nil {
+		return model.OperationResult{Success: false, Message: "Fetch failed", Output: strings.TrimSpace(out + "\n" + errOut)}, r.OutputError(out, errOut, err)
+	}
+	return model.OperationResult{Success: true, Message: "Fetch complete", Output: strings.TrimSpace(out + "\n" + errOut)}, nil
+}
+
+func (r *Runner) Pull(ctx context.Context, root, remote, branch, strategy string) (model.OperationResult, error) {
+	repo, err := r.Open(ctx, root)
+	if err != nil {
+		return model.OperationResult{}, err
+	}
+	out, errOut, err := r.RunBytes(ctx, repo.RootPath, nil, PullArgs(remote, branch, strategy)...)
 	if err != nil {
 		return model.OperationResult{Success: false, Message: "Pull failed", Output: strings.TrimSpace(out + "\n" + errOut)}, r.OutputError(out, errOut, err)
 	}
@@ -91,14 +110,7 @@ func (r *Runner) Push(ctx context.Context, root, remote, branch string) (model.O
 	if err != nil {
 		return model.OperationResult{}, err
 	}
-	args := []string{"push", "--progress"}
-	if strings.TrimSpace(remote) != "" {
-		args = append(args, remote)
-		if strings.TrimSpace(branch) != "" {
-			args = append(args, branch)
-		}
-	}
-	out, errOut, err := r.RunBytes(ctx, repo.RootPath, nil, args...)
+	out, errOut, err := r.RunBytes(ctx, repo.RootPath, nil, PushArgs(remote, branch)...)
 	if err != nil {
 		return model.OperationResult{Success: false, Message: "Push failed", Output: strings.TrimSpace(out + "\n" + errOut)}, r.OutputError(out, errOut, err)
 	}

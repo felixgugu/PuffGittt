@@ -153,3 +153,11 @@ export function allDirectoryPaths(files: FileChange[]): string[] {
   walk(root);
   return paths;
 }
+
+export function filesUnderDirectory(files: FileChange[], directoryPath: string): FileChange[] {
+  const prefix = `${directoryPath.replace(/\\/g, "/")}/`;
+  return files.filter((file) => {
+    const path = file.path.replace(/\\/g, "/");
+    return path === directoryPath || path.startsWith(prefix);
+  });
+}

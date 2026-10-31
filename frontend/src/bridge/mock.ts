@@ -1,18 +1,23 @@
 import type {
   Branch,
+  CommandPreview,
+  CommandRequest,
   Commit,
   CommitDetail,
   ConflictFile,
   ConflictVersions,
   DiffDocument,
   FileChange,
+  HunkSelection,
   OperationResult,
   RecentRepo,
+  ReflogEntry,
   Repository,
   Settings,
   StashEntry,
   Status,
   Tag,
+  UndoRecord,
 } from "../types";
 
 const now = () => new Date().toISOString();
@@ -192,6 +197,8 @@ function diffFor(path: string, side: string): DiffDocument {
     language: path.endsWith(".ts") ? "typescript" : "plaintext",
     binary: false,
     truncated: false,
+    hunks: [],
+    patchHash: "mock",
   };
 }
 
@@ -255,6 +262,10 @@ export async function mockInvoke<T>(group: string, method: string, args: any[]):
     case "ChangeAPI.Discard":
       files = files.filter((f) => !(args[1] as string[]).includes(f.path));
       return ok("Discarded") as T;
+    case "ChangeAPI.ApplyHunks": {
+      const selections = args[4] as HunkSelection[];
+      return ok(selections.some((selection) => selection.lines.length > 0) ? "Staged selected lines" : "Staged hunk") as T;
+    }
     case "CommitAPI.Commit":
       files = files.filter((f) => f.indexStatus === ".");
       return ok("Committed") as T;
@@ -264,6 +275,43 @@ export async function mockInvoke<T>(group: string, method: string, args: any[]):
       const commit = commits.find((c) => c.oid === args[1]) || commits[0];
       return { commit, files: [{ path: "src/auth/login.ts", status: "M" }] } as CommitDetail as T;
     }
+    case "HistoryAPI.Preview": {
+      const request = args[1] as CommandRequest;
+      const target = request.target || "";
+      const commands: Record<string, string> = {
+        reset: `git reset --${request.strategy || "mixed"} ${target}`,
+        revert: `git revert --no-edit ${target}`,
+        drop: target === repo.headOid ? "git reset --hard HEAD^" : `git rebase --onto ${target}^ ${target}`,
+      };
+      return {
+        command: commands[request.action] || "git",
+        destructive: request.action === "drop" || (request.action === "reset" && request.strategy === "hard"),
+      } as CommandPreview as T;
+    }
+    case "HistoryAPI.Reset":
+      return ok("Reset complete") as T;
+    case "HistoryAPI.Revert":
+      return ok("Reverted") as T;
+    case "HistoryAPI.Drop":
+      return ok("Commit dropped") as T;
+    case "HistoryAPI.Reflog":
+      return commits.slice(0, 6).map((commit, index) => ({
+        selector: `HEAD@{${index}}`,
+        oid: commit.oid,
+        previousOid: commits[index + 1]?.oid,
+        action: index === 0 ? "commit" : index === 2 ? "reset" : "merge",
+        message: commit.subject,
+        date: commit.committerTime,
+      })) as ReflogEntry[] as T;
+    case "HistoryAPI.UndoInfo":
+      return {
+        operation: "Reset (mixed)",
+        beforeOid: commits[1]?.oid || repo.headOid,
+        afterOid: repo.headOid,
+        time: now(),
+      } as UndoRecord as T;
+    case "HistoryAPI.Undo":
+      return ok("Undo complete") as T;
     case "BranchAPI.Create":
       return ok("Branch created") as T;
     case "BranchAPI.Switch":
@@ -274,10 +322,30 @@ export async function mockInvoke<T>(group: string, method: string, args: any[]):
       return ok("Merged") as T;
     case "BranchAPI.Rebase":
       return ok("Rebased") as T;
+    case "BranchAPI.Preview": {
+      const request = args[1] as CommandRequest;
+      const commands: Record<string, string> = {
+        merge: `git merge ${request.source || ""}`.trim(),
+        rebase: `git rebase ${request.target || ""}`.trim(),
+        switch: `git switch ${request.name || ""}`.trim(),
+        delete: `git branch ${request.force ? "-D" : "-d"} ${request.name || ""}`.trim(),
+        create: `git branch ${request.name || ""}${request.startPoint ? ` ${request.startPoint}` : ""}`.trim(),
+      };
+      return { command: commands[request.action] || "git", destructive: request.action === "delete" || request.action === "rebase" } as CommandPreview as T;
+    }
     case "SyncAPI.Fetch":
     case "SyncAPI.Pull":
     case "SyncAPI.Push":
       return ok("Synchronized") as T;
+    case "SyncAPI.Preview": {
+      const request = args[1] as CommandRequest;
+      const commands: Record<string, string> = {
+        fetch: `git fetch --progress${request.remote ? ` ${request.remote}` : ""}`,
+        pull: `git pull --no-rebase${request.remote ? ` ${request.remote}` : ""}${request.branch ? ` ${request.branch}` : ""}`,
+        push: `git push --progress${request.remote ? ` ${request.remote}` : ""}${request.branch ? ` ${request.branch}` : ""}`,
+      };
+      return { command: commands[request.action] || "git", destructive: false } as CommandPreview as T;
+    }
     case "ConflictAPI.List":
       return [] as ConflictFile[] as T;
     case "ConflictAPI.GetVersions":

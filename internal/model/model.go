@@ -33,13 +33,37 @@ type Status struct {
 }
 
 type DiffDocument struct {
-	Path      string `json:"path"`
-	Side      string `json:"side"`
-	OldText   string `json:"oldText"`
-	NewText   string `json:"newText"`
-	Language  string `json:"language"`
-	Binary    bool   `json:"binary"`
-	Truncated bool   `json:"truncated"`
+	Path      string     `json:"path"`
+	Side      string     `json:"side"`
+	OldText   string     `json:"oldText"`
+	NewText   string     `json:"newText"`
+	Language  string     `json:"language"`
+	Binary    bool       `json:"binary"`
+	Truncated bool       `json:"truncated"`
+	Hunks     []DiffHunk `json:"hunks"`
+	PatchHash string     `json:"patchHash,omitempty"`
+}
+
+type DiffLine struct {
+	Kind      string `json:"kind"`
+	Text      string `json:"text"`
+	OldLine   int    `json:"oldLine"`
+	NewLine   int    `json:"newLine"`
+	NoNewline bool   `json:"noNewline,omitempty"`
+}
+
+type DiffHunk struct {
+	Header   string     `json:"header"`
+	OldStart int        `json:"oldStart"`
+	OldCount int        `json:"oldCount"`
+	NewStart int        `json:"newStart"`
+	NewCount int        `json:"newCount"`
+	Lines    []DiffLine `json:"lines"`
+}
+
+type HunkSelection struct {
+	Hunk  int   `json:"hunk"`
+	Lines []int `json:"lines"`
 }
 
 type Commit struct {
@@ -156,4 +180,37 @@ type OperationResult struct {
 	Success bool   `json:"success"`
 	Message string `json:"message"`
 	Output  string `json:"output,omitempty"`
+}
+
+type CommandRequest struct {
+	Action     string `json:"action"`
+	Source     string `json:"source,omitempty"`
+	Target     string `json:"target,omitempty"`
+	Strategy   string `json:"strategy,omitempty"`
+	Name       string `json:"name,omitempty"`
+	StartPoint string `json:"startPoint,omitempty"`
+	Remote     string `json:"remote,omitempty"`
+	Branch     string `json:"branch,omitempty"`
+	Force      bool   `json:"force,omitempty"`
+}
+
+type CommandPreview struct {
+	Command     string `json:"command"`
+	Destructive bool   `json:"destructive"`
+}
+
+type ReflogEntry struct {
+	Selector    string `json:"selector"`
+	Oid         string `json:"oid"`
+	PreviousOid string `json:"previousOid,omitempty"`
+	Action      string `json:"action"`
+	Message     string `json:"message"`
+	Date        string `json:"date"`
+}
+
+type UndoRecord struct {
+	Operation string `json:"operation"`
+	BeforeOid string `json:"beforeOid"`
+	AfterOid  string `json:"afterOid,omitempty"`
+	Time      string `json:"time"`
 }

@@ -75,29 +75,37 @@ export function ConflictsView({ tab }: ConflictsViewProps) {
 
   return (
     <div className="conflicts-view">
-      <div className="view-header">
-        <div>
-          <h1>{t("conflicts.title")}</h1>
-          <p>{root}</p>
-        </div>
-        <div className="view-header-actions">
-          {operation !== "normal" ? (
-            <>
-              <Badge appearance="tint" color="warning">{operation}</Badge>
-              <Button icon={<ArrowSync24Regular />} onClick={() => void run("continue", () => api.conflict.continue(root, operation), t("common.confirm"))} disabled={!!busy}>
-                {t("conflicts.continue")}
-              </Button>
-              <Button icon={<Dismiss24Regular />} onClick={() => void run("abort", () => api.conflict.abort(root, operation), t("common.cancel"))} disabled={!!busy}>
-                {t("conflicts.abort")}
-              </Button>
-            </>
-          ) : null}
-        </div>
-      </div>
-
       <div className="conflict-shell">
         <div className="panel-card conflict-file-panel">
-          <div className="panel-heading"><span>{t("conflicts.files")}</span><span className="muted">{conflicts.data?.length || 0}</span></div>
+          <div className="panel-heading">
+            <span>{t("conflicts.title")}</span>
+            <div className="panel-heading-actions">
+              <span className="muted">{conflicts.data?.length || 0}</span>
+              {operation !== "normal" ? (
+                <>
+                  <Badge size="small" appearance="tint" color="warning">{operation}</Badge>
+                  <Button
+                    size="small"
+                    appearance="subtle"
+                    icon={<ArrowSync24Regular />}
+                    title={t("conflicts.continue")}
+                    aria-label={t("conflicts.continue")}
+                    onClick={() => void run("continue", () => api.conflict.continue(root, operation), t("common.confirm"))}
+                    disabled={!!busy}
+                  />
+                  <Button
+                    size="small"
+                    appearance="subtle"
+                    icon={<Dismiss24Regular />}
+                    title={t("conflicts.abort")}
+                    aria-label={t("conflicts.abort")}
+                    onClick={() => void run("abort", () => api.conflict.abort(root, operation), t("common.cancel"))}
+                    disabled={!!busy}
+                  />
+                </>
+              ) : null}
+            </div>
+          </div>
           {conflicts.isLoading ? <div className="center-state"><Spinner /></div> : null}
           {conflicts.data?.map((file) => (
             <button

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Button, Field, Input, Spinner } from "@fluentui/react-components";
+import { Button, Field, Spinner } from "@fluentui/react-components";
 import {
   Add24Regular,
   ArrowDownload24Regular,
@@ -10,6 +10,7 @@ import {
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { api } from "../bridge/api";
+import { UnderlineInput } from "../components/FormControls";
 import type { Repository } from "../types";
 
 interface WelcomeViewProps {
@@ -154,28 +155,28 @@ export function WelcomeView({ onOpen, onOpenRecent, onRepoOpened, onError }: Wel
               {mode === "clone" ? (
                 <>
                   <Field label={t("welcome.cloneUrl")}>
-                    <Input value={cloneUrl} onChange={(_, data) => setCloneUrl(data.value)} placeholder="https://github.com/owner/repo.git" />
+                    <UnderlineInput value={cloneUrl} onChange={(_, data) => setCloneUrl(data.value)} placeholder="https://github.com/owner/repo.git" />
                   </Field>
                   <Field label={t("welcome.cloneParent")}>
                     <div className="input-with-button">
-                      <Input value={cloneParent} onChange={(_, data) => setCloneParent(data.value)} />
+                      <UnderlineInput value={cloneParent} onChange={(_, data) => setCloneParent(data.value)} />
                       <Button icon={<FolderOpen24Regular />} onClick={() => void pickFolder(setCloneParent, t("welcome.cloneParent"))} />
                     </div>
                   </Field>
                   <Field label={t("welcome.cloneName")}>
-                    <Input value={cloneName} onChange={(_, data) => setCloneName(data.value)} />
+                    <UnderlineInput value={cloneName} onChange={(_, data) => setCloneName(data.value)} />
                   </Field>
                 </>
               ) : (
                 <>
                   <Field label={t("welcome.initPath")}>
                     <div className="input-with-button">
-                      <Input value={initPath} onChange={(_, data) => setInitPath(data.value)} />
+                      <UnderlineInput value={initPath} onChange={(_, data) => setInitPath(data.value)} />
                       <Button icon={<FolderOpen24Regular />} onClick={() => void pickFolder(setInitPath, t("welcome.initPath"))} />
                     </div>
                   </Field>
                   <Field label={t("welcome.initBranch")}>
-                    <Input value={initBranch} onChange={(_, data) => setInitBranch(data.value)} />
+                    <UnderlineInput value={initBranch} onChange={(_, data) => setInitBranch(data.value)} />
                   </Field>
                 </>
               )}
