@@ -15,6 +15,7 @@ import type {
   StashEntry,
   Status,
   Tag,
+  WorkspaceRepository,
 } from "../types";
 
 const goApi = () => (window as any).go?.api;
@@ -39,12 +40,23 @@ export function setNativeTheme(mode: string): void {
   }
 }
 
+function invokeMain<T>(method: string, ...args: any[]): Promise<T> {
+  const fn = goMain()?.App?.[method];
+  if (typeof fn === "function") {
+    return Promise.resolve(fn(...args)).catch((error: any) => {
+      throw new Error(error?.message || String(error));
+    });
+  }
+  return Promise.resolve(undefined as T);
+}
+
 export const api = {
   app: {
     getEnvironment: () => invoke<Environment>("AppAPI", "GetEnvironment"),
     getSettings: () => invoke<Settings>("AppAPI", "GetSettings"),
     saveSettings: (settings: Settings) => invoke<Settings>("AppAPI", "SaveSettings", settings),
     listRecent: () => invoke<RecentRepo[]>("AppAPI", "ListRecent"),
+    listWorkspaceRepositories: () => invoke<WorkspaceRepository[]>("AppAPI", "ListWorkspaceRepositories"),
     removeRecent: (path: string) => invoke<void>("AppAPI", "RemoveRecent", path),
     pickFolder: (title: string) => invoke<string>("AppAPI", "PickFolder", title),
     openRepository: (path: string) => invoke<Repository>("AppAPI", "OpenRepository", path),
@@ -54,6 +66,12 @@ export const api = {
       invoke<Repository>("AppAPI", "CloneRepository", url, parentPath, name),
     openInExplorer: (path: string) => invoke<void>("AppAPI", "OpenInExplorer", path),
     openExternal: (url: string) => invoke<void>("AppAPI", "OpenExternal", url),
+  },
+  window: {
+    minimize: () => invokeMain<void>("MinimizeWindow"),
+    toggleMaximize: () => invokeMain<void>("ToggleMaximizeWindow"),
+    close: () => invokeMain<void>("CloseWindow"),
+    isMaximized: () => invokeMain<boolean>("IsWindowMaximized"),
   },
   repo: {
     getStatus: (root: string) => invoke<Status>("RepoAPI", "GetStatus", root),

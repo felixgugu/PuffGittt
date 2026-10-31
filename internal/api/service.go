@@ -3,7 +3,10 @@ package api
 import (
 	"context"
 	"fmt"
+	"os"
+	"path/filepath"
 	goruntime "runtime"
+	"sort"
 	"strings"
 	"sync"
 
@@ -96,6 +99,66 @@ func (a *AppAPI) ListRecent() []model.RecentRepo {
 
 func (a *AppAPI) RemoveRecent(path string) error {
 	return a.s.cfg.RemoveRecent(path)
+}
+
+func (a *AppAPI) ListWorkspaceRepositories() []model.WorkspaceRepository {
+	settings := a.s.cfg.LoadSettings()
+	runner := a.s.runnerWithSettings()
+	seen := map[string]bool{}
+	result := []model.WorkspaceRepository{}
+
+	add := func(path, kind string) {
+		if strings.TrimSpace(path) == "" {
+			return
+		}
+		repo, err := runner.Open(a.s.context(), path)
+		if err != nil {
+			return
+		}
+		key := strings.ToLower(filepath.Clean(repo.RootPath))
+		if seen[key] {
+			return
+		}
+		seen[key] = true
+		changes := 0
+		if status, err := runner.Status(a.s.context(), repo.RootPath); err == nil {
+			changes = len(status.Files)
+		}
+		result = append(result, model.WorkspaceRepository{
+			Name:    repo.Name,
+			Path:    repo.RootPath,
+			Branch:  repo.Branch,
+			Changes: changes,
+			Kind:    kind,
+		})
+	}
+
+	if strings.TrimSpace(settings.ProjectsRoot) != "" {
+		add(settings.ProjectsRoot, "project")
+		if entries, err := os.ReadDir(settings.ProjectsRoot); err == nil {
+			for _, entry := range entries {
+				if !entry.IsDir() {
+					continue
+				}
+				name := entry.Name()
+				if strings.HasPrefix(name, ".") || name == "node_modules" {
+					continue
+				}
+				add(filepath.Join(settings.ProjectsRoot, name), "project")
+			}
+		}
+	}
+	for _, recent := range settings.Recent {
+		add(recent.Path, "recent")
+	}
+
+	sort.SliceStable(result, func(i, j int) bool {
+		if result[i].Kind != result[j].Kind {
+			return result[i].Kind == "project"
+		}
+		return strings.ToLower(result[i].Name) < strings.ToLower(result[j].Name)
+	})
+	return result
 }
 
 func (a *AppAPI) PickFolder(title string) (string, error) {

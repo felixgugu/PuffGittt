@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { monaco } from "../monaco";
+import { monaco, monacoTheme } from "../monaco";
 
 interface DiffEditorProps {
   oldValue: string;
@@ -39,7 +39,7 @@ export function DiffEditor({ oldValue, newValue, language, dark, emptyText, rend
     editorRef.current = editor;
     originalRef.current = original;
     modifiedRef.current = modified;
-    monaco.editor.setTheme(dark ? "vs-dark" : "vs");
+    monaco.editor.setTheme(monacoTheme(dark));
     return () => {
       editor.dispose();
       original.dispose();
@@ -61,7 +61,7 @@ export function DiffEditor({ oldValue, newValue, language, dark, emptyText, rend
   }, [renderSideBySide]);
 
   useEffect(() => {
-    monaco.editor.setTheme(dark ? "vs-dark" : "vs");
+    monaco.editor.setTheme(monacoTheme(dark));
   }, [dark]);
 
   return (

@@ -1,32 +1,22 @@
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from "react";
 import {
   Badge,
   Button,
   FluentProvider,
   Select,
   Spinner,
-  webDarkTheme,
-  webLightTheme,
 } from "@fluentui/react-components";
 import {
-  Add24Regular,
   ArrowDownload24Regular,
   ArrowSync24Regular,
   ArrowUpload24Regular,
-  Branch24Regular,
-  Dismiss24Regular,
-  DocumentBulletList24Regular,
-  FolderOpen24Regular,
-  History24Regular,
-  Settings24Regular,
-  Warning24Regular,
 } from "@fluentui/react-icons";
 import { useTranslation } from "react-i18next";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import i18n from "./i18n";
 import { api, setNativeTheme } from "./bridge/api";
 import { useActiveTab, useAppStore, type ThemeMode, type ViewKey } from "./store";
-import type { Environment, Repository, Settings, Status } from "./types";
+import type { Environment, Repository, Settings } from "./types";
 import { WelcomeView } from "./views/WelcomeView";
 import { ChangesView } from "./views/ChangesView";
 import { HistoryView } from "./views/HistoryView";
@@ -35,7 +25,9 @@ import { ConflictsView } from "./views/ConflictsView";
 import { StashesView } from "./views/StashesView";
 import { SettingsPanel } from "./components/SettingsPanel";
 import { StatusBar } from "./components/StatusBar";
-import appIcon from "./assets/appicon.png";
+import { TitleBar } from "./components/TitleBar";
+import { Sidebar } from "./components/Sidebar";
+import { puffDarkTheme, puffLightTheme } from "./theme";
 
 function useSystemDark(): boolean {
   const [dark, setDark] = useState(() => window.matchMedia("(prefers-color-scheme: dark)").matches);
@@ -55,6 +47,8 @@ export default function App() {
   const setTheme = useAppStore((state) => state.setTheme);
   const language = useAppStore((state) => state.language);
   const setLanguage = useAppStore((state) => state.setLanguage);
+  const sidebarCollapsed = useAppStore((state) => state.sidebarCollapsed);
+  const setSidebarCollapsed = useAppStore((state) => state.setSidebarCollapsed);
   const settings = useAppStore((state) => state.settings);
   const setSettings = useAppStore((state) => state.setSettings);
   const environment = useAppStore((state) => state.environment);
@@ -67,14 +61,19 @@ export default function App() {
   const closeTab = useAppStore((state) => state.closeTab);
   const openTab = useAppStore((state) => state.openTab);
   const setView = useAppStore((state) => state.setView);
-  const replaceRepo = useAppStore((state) => state.replaceRepo);
   const activeTab = useActiveTab();
   const queryClient = useQueryClient();
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
+  const [maximized, setMaximized] = useState(false);
+  const [sidebarWidth, setSidebarWidth] = useState(() => {
+    const stored = Number(localStorage.getItem("puffgittt:sidebarWidth"));
+    return Number.isFinite(stored) && stored >= 200 && stored <= 320 ? stored : 240;
+  });
 
   const dark = theme === "dark" || (theme === "system" && systemDark);
   const root = activeTab?.repo.rootPath;
+  const baseFontSize = settings?.baseFontSize || 14;
 
   const statusQuery = useQuery({
     queryKey: ["status", root],
@@ -87,7 +86,11 @@ export default function App() {
     queryFn: () => api.repo.getBranches(root!),
     enabled: !!root,
   });
-
+  const workspaceQuery = useQuery({
+    queryKey: ["workspaceRepositories", settings?.projectsRoot],
+    queryFn: () => api.app.listWorkspaceRepositories(),
+    enabled: !!settings,
+  });
   const status = statusQuery.data;
 
   useEffect(() => {
@@ -102,38 +105,59 @@ export default function App() {
   useEffect(() => {
     document.documentElement.dataset.theme = dark ? "dark" : "light";
     document.documentElement.style.colorScheme = dark ? "dark" : "light";
+    document.documentElement.style.setProperty("--base-font-size", `${baseFontSize}px`);
+    const family = settings?.fontFamily?.trim();
+    if (family) {
+      document.documentElement.style.setProperty("--font-app", `"${family}", var(--font-ui)`);
+    } else {
+      document.documentElement.style.removeProperty("--font-app");
+    }
     setNativeTheme(theme);
-  }, [dark, theme]);
+  }, [baseFontSize, dark, settings?.fontFamily, theme]);
 
   useEffect(() => {
-    if (!status) return;
-    if (activeTab && status.repo.revision !== activeTab.repo.revision) {
-      replaceRepo(status.repo);
-    }
-  }, [activeTab, replaceRepo, status]);
+    localStorage.setItem("puffgittt:sidebarWidth", String(sidebarWidth));
+  }, [sidebarWidth]);
 
-  const invalidateRepo = () => {
-    if (!root) return;
-    void queryClient.invalidateQueries({ queryKey: ["status", root] });
-    void queryClient.invalidateQueries({ queryKey: ["branches", root] });
-    void queryClient.invalidateQueries({ queryKey: ["history", root] });
-    void queryClient.invalidateQueries({ queryKey: ["conflicts", root] });
-    void queryClient.invalidateQueries({ queryKey: ["stashes", root] });
-    void queryClient.invalidateQueries({ queryKey: ["remotes", root] });
+  useEffect(() => {
+    const sync = () => api.window.isMaximized().then(setMaximized).catch(() => {});
+    sync();
+    window.addEventListener("resize", sync);
+    return () => window.removeEventListener("resize", sync);
+  }, []);
+
+  const invalidateRepo = (target = root) => {
+    if (!target) return;
+    void queryClient.invalidateQueries({ queryKey: ["status", target] });
+    void queryClient.invalidateQueries({ queryKey: ["branches", target] });
+    void queryClient.invalidateQueries({ queryKey: ["history", target] });
+    void queryClient.invalidateQueries({ queryKey: ["conflicts", target] });
+    void queryClient.invalidateQueries({ queryKey: ["stashes", target] });
+    void queryClient.invalidateQueries({ queryKey: ["remotes", target] });
+    void queryClient.invalidateQueries({ queryKey: ["workspaceRepositories"] });
+    void queryClient.invalidateQueries({ queryKey: ["recent"] });
   };
 
   const openRepository = async (repo: Repository) => {
     openTab(repo);
     setStatusMessage(t("changes.operationDone"));
-    invalidateRepo();
+    invalidateRepo(repo.rootPath);
+  };
+
+  const openPath = async (path: string) => {
+    try {
+      const repo = await api.app.openRepository(path);
+      await openRepository(repo);
+    } catch (error: any) {
+      setStatusMessage(error?.message || t("welcome.openFailed"));
+    }
   };
 
   const handleOpenFolder = async () => {
     try {
       const path = await api.app.pickFolder(t("toolbar.openFolder"));
       if (!path) return;
-      const repo = await api.app.openRepository(path);
-      await openRepository(repo);
+      await openPath(path);
     } catch (error: any) {
       setStatusMessage(error?.message || t("welcome.openFailed"));
     }
@@ -184,9 +208,42 @@ export default function App() {
       setNativeTheme(saved.theme);
       setSettingsOpen(false);
       setStatusMessage(t("settings.saved"));
+      void queryClient.invalidateQueries({ queryKey: ["workspaceRepositories"] });
     } catch (error: any) {
       setStatusMessage(error?.message || t("settings.saveFailed"));
     }
+  };
+
+  const handleOpenProjectsFolder = () => {
+    const path = settings?.projectsRoot;
+    if (!path) {
+      setSettingsOpen(true);
+      return;
+    }
+    void api.app.openInExplorer(path).catch((error: any) => {
+      setStatusMessage(error?.message || String(error));
+    });
+  };
+
+  const beginSidebarResize = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (sidebarCollapsed) return;
+    event.preventDefault();
+    const startX = event.clientX;
+    const startWidth = sidebarWidth;
+    const move = (moveEvent: PointerEvent) => {
+      const next = Math.min(320, Math.max(200, startWidth + moveEvent.clientX - startX));
+      setSidebarWidth(next);
+    };
+    const up = () => {
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", up);
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+    };
+    document.body.style.cursor = "col-resize";
+    document.body.style.userSelect = "none";
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", up, { once: true });
   };
 
   useEffect(() => {
@@ -212,64 +269,29 @@ export default function App() {
     [branchesQuery.data],
   );
 
-  const navItems: { key: ViewKey; label: string; icon: ReactNode }[] = [
-    { key: "changes", label: t("nav.changes"), icon: <DocumentBulletList24Regular /> },
-    { key: "history", label: t("nav.history"), icon: <History24Regular /> },
-    { key: "branches", label: t("nav.branches"), icon: <Branch24Regular /> },
-    { key: "conflicts", label: t("nav.conflicts"), icon: <Warning24Regular /> },
-    { key: "stashes", label: t("nav.stashes"), icon: <ArrowSync24Regular /> },
-  ];
-
   return (
-    <FluentProvider theme={dark ? webDarkTheme : webLightTheme} className="app-provider">
-      <div className="app-shell">
-        <header className="app-header">
-          <div className="tab-strip">
-            <div className="brand">
-              <img src={appIcon} alt="" className="brand-icon" />
-              <div>
-                <div className="brand-title">PuffGittt</div>
-                <div className="brand-subtitle">{t("app.subtitle")}</div>
-              </div>
-            </div>
-            <div className="repo-tabs">
-              {tabs.map((tab) => (
-                <div
-                  key={tab.repo.rootPath}
-                  className={`repo-tab${tab.repo.rootPath === activeId ? " active" : ""}`}
-                  onClick={() => setActive(tab.repo.rootPath)}
-                >
-                  <span className="repo-tab-name">{tab.repo.name}</span>
-                  <button
-                    type="button"
-                    className="repo-tab-close"
-                    title={t("toolbar.closeTab")}
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      closeTab(tab.repo.rootPath);
-                    }}
-                  >
-                    <Dismiss24Regular />
-                  </button>
-                </div>
-              ))}
-              <Button appearance="subtle" icon={<Add24Regular />} title={t("welcome.open")} onClick={handleOpenFolder} />
-            </div>
-            <div className="header-actions">
-              <Button
-                appearance="subtle"
-                icon={<FolderOpen24Regular />}
-                title={t("welcome.open")}
-                onClick={handleOpenFolder}
-              />
-              <Button
-                appearance="subtle"
-                icon={<Settings24Regular />}
-                title={t("toolbar.settings")}
-                onClick={() => setSettingsOpen(true)}
-              />
-            </div>
-          </div>
+    <FluentProvider theme={dark ? puffDarkTheme : puffLightTheme} className="app-provider">
+      <div
+        className={`app-shell${sidebarCollapsed ? " sidebar-collapsed" : ""}`}
+        style={{ "--sidebar-width": `${sidebarCollapsed ? 72 : sidebarWidth}px` } as CSSProperties}
+      >
+        <div className="app-header">
+          <TitleBar
+            tabs={tabs}
+            activeId={activeId}
+            maximized={maximized}
+            onActivate={setActive}
+            onCloseTab={closeTab}
+            onOpen={handleOpenFolder}
+            onSettings={() => setSettingsOpen(true)}
+            onMinimize={() => void api.window.minimize()}
+            onToggleMaximize={() => {
+              void api.window.toggleMaximize();
+              setTimeout(() => api.window.isMaximized().then(setMaximized).catch(() => {}), 120);
+            }}
+            onClose={() => void api.window.close()}
+          />
+
 
           {activeTab ? (
             <div className="command-bar">
@@ -320,80 +342,49 @@ export default function App() {
                   appearance="subtle"
                   icon={<ArrowSync24Regular />}
                   title={t("toolbar.refresh")}
-                  onClick={() => invalidateRepo()}
-                />
-              </div>
-              <div className="command-spacer" />
-              <div className="command-status">
-                {status ? (
-                  <>
-                    <Badge appearance="tint" color="informative">{status.repo.branch || "HEAD"}</Badge>
-                    <span>{status.files.length} {t("status.changed")}</span>
-                    {status.repo.operation !== "normal" ? (
-                      <Badge appearance="tint" color="warning">
-                        {t(`status.operation${status.repo.operation.charAt(0).toUpperCase()}${status.repo.operation.slice(1)}`)}
-                      </Badge>
-                    ) : null}
-                  </>
-                ) : null}
-                {statusQuery.isFetching ? <Spinner size="tiny" /> : null}
-              </div>
+                onClick={() => invalidateRepo()}
+              />
             </div>
-          ) : null}
-        </header>
-
-        <div className="app-body">
-          <aside className="app-sidebar">
-            <div className="nav-section-label">{activeTab?.repo.name || t("app.title")}</div>
-            {navItems.map((item) => (
-              <button
-                key={item.key}
-                type="button"
-                className={`nav-item${activeTab?.view === item.key ? " active" : ""}`}
-                disabled={!activeTab}
-                title={item.label}
-                onClick={() => activeTab && setView(activeTab.repo.rootPath, item.key)}
-              >
-                <span className="nav-icon">{item.icon}</span>
-                <span className="nav-label">{item.label}</span>
-                {item.key === "changes" && status && status.files.length > 0 ? (
-                  <span className="nav-badge">{status.files.length}</span>
-                ) : null}
-                {item.key === "conflicts" && status?.files.some((file) => file.kind === "conflicted") ? (
-                  <span className="nav-badge warning">!</span>
-                ) : null}
-              </button>
-            ))}
-            <button
-              type="button"
-              className="nav-item"
-              title={t("nav.settings")}
-              onClick={() => setSettingsOpen(true)}
-            >
-              <span className="nav-icon"><Settings24Regular /></span>
-              <span className="nav-label">{t("nav.settings")}</span>
-            </button>
-            <div className="sidebar-spacer" />
-            <div className="sidebar-footer">
-              <span className="sidebar-dot" />
-              <span>{environment?.gitFound ? environment.gitVersion.replace("git version ", "Git ") : t("settings.gitMissing")}</span>
+            <div className="command-spacer" />
+            <div className="command-status">
+              {status ? (
+                <>
+                  <Badge appearance="tint" color="informative">{status.repo.branch || "HEAD"}</Badge>
+                  <span>{status.files.length} {t("status.changed")}</span>
+                  {status.repo.operation !== "normal" ? (
+                    <Badge appearance="tint" color="warning">{status.repo.operation}</Badge>
+                  ) : null}
+                </>
+              ) : null}
+              {statusQuery.isFetching ? <Spinner size="tiny" /> : null}
             </div>
-          </aside>
+          </div>
+        ) : null}
+          </div>
 
-          <main className="workspace">
+          <div className="app-body">
+            <Sidebar
+              activeTab={activeTab}
+              collapsed={sidebarCollapsed}
+              repositories={workspaceQuery.data || []}
+              changeCount={status?.files.length || 0}
+              hasConflicts={!!status?.files.some((file) => file.kind === "conflicted")}
+              onToggle={() => setSidebarCollapsed(!sidebarCollapsed)}
+              onNavigate={(view) => activeTab && setView(activeTab.repo.rootPath, view)}
+              onOpenRepository={(path) => void openPath(path)}
+              onOpenProjects={handleOpenProjectsFolder}
+            />
+            {!sidebarCollapsed ? (
+              <div className="sidebar-resizer" onPointerDown={beginSidebarResize} role="separator" aria-orientation="vertical" />
+            ) : null}
+
+            <main className="workspace">
             {!activeTab ? (
               <WelcomeView
                 onOpen={handleOpenFolder}
                 onRepoOpened={openRepository}
                 onError={setStatusMessage}
-                onOpenRecent={async (path) => {
-                  try {
-                    const repo = await api.app.openRepository(path);
-                    await openRepository(repo);
-                  } catch (error: any) {
-                    setStatusMessage(error?.message || String(error));
-                  }
-                }}
+                onOpenRecent={(path) => void openPath(path)}
               />
             ) : activeTab.view === "changes" ? (
               <ChangesView tab={activeTab} />
@@ -406,15 +397,10 @@ export default function App() {
             ) : (
               <StashesView tab={activeTab} />
             )}
-          </main>
-        </div>
+            </main>
+          </div>
 
-        <StatusBar
-          status={status}
-          environment={environment}
-          language={language}
-          message={statusMessage}
-        />
+        <StatusBar status={status} language={language} message={statusMessage} />
       </div>
 
       {settingsOpen ? (
@@ -430,6 +416,9 @@ export default function App() {
           onThemeChange={(next) => {
             setTheme(next);
             setNativeTheme(next);
+          }}
+          onFontSizeChange={(next) => {
+            document.documentElement.style.setProperty("--base-font-size", `${next}px`);
           }}
         />
       ) : null}

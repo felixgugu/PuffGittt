@@ -43,6 +43,19 @@ func Init() *Config {
 	return cfg
 }
 
+func defaultProjectsRoot() string {
+	if value := os.Getenv("REPOS_ROOT"); value != "" {
+		return value
+	}
+	if home, err := os.UserHomeDir(); err == nil && home != "" {
+		projects := filepath.Join(home, "Projects")
+		if info, err := os.Stat(projects); err == nil && info.IsDir() {
+			return projects
+		}
+	}
+	return ""
+}
+
 func (c *Config) SettingsPath() string {
 	return filepath.Join(c.SettingsDir, "settings.json")
 }
@@ -56,21 +69,29 @@ func (c *Config) LoadSettings() model.Settings {
 	defer c.mu.Unlock()
 
 	settings := model.Settings{
-		Theme:    "system",
-		Language: "zh-TW",
+		Theme:        "system",
+		Language:     "zh-TW",
+		BaseFontSize: 14,
+		ProjectsRoot: defaultProjectsRoot(),
 	}
 	data, err := os.ReadFile(c.SettingsPath())
 	if err != nil {
 		return settings
 	}
 	if err := json.Unmarshal(data, &settings); err != nil {
-		return model.Settings{Theme: "system", Language: "zh-TW"}
+		return model.Settings{Theme: "system", Language: "zh-TW", BaseFontSize: 14, ProjectsRoot: defaultProjectsRoot()}
 	}
 	if settings.Theme == "" {
 		settings.Theme = "system"
 	}
 	if settings.Language == "" {
 		settings.Language = "zh-TW"
+	}
+	if settings.BaseFontSize < 12 || settings.BaseFontSize > 20 {
+		settings.BaseFontSize = 14
+	}
+	if settings.ProjectsRoot == "" {
+		settings.ProjectsRoot = defaultProjectsRoot()
 	}
 	if settings.Recent == nil {
 		settings.Recent = []model.RecentRepo{}
@@ -87,6 +108,9 @@ func (c *Config) SaveSettings(settings model.Settings) error {
 	}
 	if settings.Language == "" {
 		settings.Language = "zh-TW"
+	}
+	if settings.BaseFontSize < 12 || settings.BaseFontSize > 20 {
+		settings.BaseFontSize = 14
 	}
 	if settings.Recent == nil {
 		settings.Recent = []model.RecentRepo{}

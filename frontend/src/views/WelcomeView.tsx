@@ -1,11 +1,16 @@
 import { useState } from "react";
 import { Button, Field, Input, Spinner } from "@fluentui/react-components";
-import { Add24Regular, ArrowDownload24Regular, FolderOpen24Regular, Code24Regular, Dismiss24Regular } from "@fluentui/react-icons";
+import {
+  Add24Regular,
+  ArrowDownload24Regular,
+  Code24Regular,
+  Dismiss24Regular,
+  FolderOpen24Regular,
+} from "@fluentui/react-icons";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { api } from "../bridge/api";
 import type { Repository } from "../types";
-import appIcon from "../assets/appicon.png";
 
 interface WelcomeViewProps {
   onOpen: () => void;
@@ -25,6 +30,10 @@ export function WelcomeView({ onOpen, onOpenRecent, onRepoOpened, onError }: Wel
   const [initBranch, setInitBranch] = useState("main");
 
   const recent = useQuery({ queryKey: ["recent"], queryFn: () => api.app.listRecent() });
+  const workspace = useQuery({
+    queryKey: ["workspaceRepositories", "welcome"],
+    queryFn: () => api.app.listWorkspaceRepositories(),
+  });
 
   const pickFolder = async (setter: (value: string) => void, title: string) => {
     try {
@@ -63,49 +72,74 @@ export function WelcomeView({ onOpen, onOpenRecent, onRepoOpened, onError }: Wel
     }
   };
 
+  const projectRepos = (workspace.data || []).filter((repo) => repo.kind === "project");
+  const projectPaths = new Set(projectRepos.map((repo) => repo.path.toLowerCase()));
+  const recentEntries = (recent.data || []).filter((entry) => !projectPaths.has(entry.path.toLowerCase()));
+
   return (
     <div className="welcome-view">
-      <div className="welcome-hero">
-        <img src={appIcon} alt="" className="welcome-icon" />
-        <div>
+      <div className="welcome-inner">
+        <div className="welcome-heading">
           <h1>{t("welcome.title")}</h1>
           <p>{t("welcome.subtitle")}</p>
         </div>
-      </div>
 
-      <div className="welcome-actions">
-        <Button appearance="primary" size="large" icon={<FolderOpen24Regular />} onClick={onOpen}>
-          {t("welcome.open")}
-        </Button>
-        <Button size="large" icon={<ArrowDownload24Regular />} onClick={() => setMode("clone")}>
-          {t("welcome.clone")}
-        </Button>
-        <Button size="large" icon={<Add24Regular />} onClick={() => setMode("init")}>
-          {t("welcome.init")}
-        </Button>
-      </div>
+        <div className="welcome-actions">
+          <Button appearance="primary" size="large" icon={<FolderOpen24Regular />} onClick={onOpen}>
+            {t("welcome.open")}
+          </Button>
+          <Button size="large" icon={<ArrowDownload24Regular />} onClick={() => setMode("clone")}>
+            {t("welcome.clone")}
+          </Button>
+          <Button size="large" icon={<Add24Regular />} onClick={() => setMode("init")}>
+            {t("welcome.init")}
+          </Button>
+        </div>
 
-      <div className="welcome-recent">
-        <div className="section-heading">{t("welcome.recent")}</div>
-        {recent.isLoading ? <Spinner size="small" /> : null}
-        {!recent.isLoading && (recent.data?.length || 0) === 0 ? (
-          <div className="empty-state">{t("welcome.noRecent")}</div>
+        {projectRepos.length > 0 ? (
+          <div className="welcome-section">
+            <div className="section-heading">{t("sidebar.projects")}</div>
+            <div className="recent-grid">
+              {projectRepos.map((repo) => (
+                <button
+                  key={repo.path}
+                  type="button"
+                  className="recent-card"
+                  onClick={() => onOpenRecent(repo.path)}
+                >
+                  <FolderOpen24Regular />
+                  <span>
+                    <strong>{repo.name}</strong>
+                    <small>{repo.branch || repo.path}</small>
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
         ) : null}
-        <div className="recent-grid">
-          {recent.data?.map((entry) => (
-            <button
-              key={entry.path}
-              type="button"
-              className="recent-card"
-              onClick={() => onOpenRecent(entry.path)}
-            >
-              <FolderOpen24Regular />
-              <span>
-                <strong>{entry.name}</strong>
-                <small>{entry.path}</small>
-              </span>
-            </button>
-          ))}
+
+        <div className="welcome-section">
+          <div className="section-heading">{t("welcome.recent")}</div>
+          {recent.isLoading ? <Spinner size="small" /> : null}
+          {!recent.isLoading && recentEntries.length === 0 ? (
+            <div className="empty-state">{t("welcome.noRecent")}</div>
+          ) : null}
+          <div className="recent-grid">
+            {recentEntries.map((entry) => (
+              <button
+                key={entry.path}
+                type="button"
+                className="recent-card"
+                onClick={() => onOpenRecent(entry.path)}
+              >
+                <FolderOpen24Regular />
+                <span>
+                  <strong>{entry.name}</strong>
+                  <small>{entry.path}</small>
+                </span>
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 

@@ -163,7 +163,9 @@ const settings: Settings = {
   theme: "system",
   language: "zh-TW",
   fontFamily: "",
+  baseFontSize: 14,
   gitPath: "",
+  projectsRoot: "C:\\Demo",
   authorName: "",
   authorEmail: "",
   recent: [{ path: repo.rootPath, name: repo.name, lastOpened: now() }],
@@ -215,6 +217,11 @@ export async function mockInvoke<T>(group: string, method: string, args: any[]):
       return structuredClone(settings) as T;
     case "AppAPI.ListRecent":
       return settings.recent as T;
+    case "AppAPI.ListWorkspaceRepositories":
+      return [
+        { name: repo.name, path: repo.rootPath, branch: repo.branch || "main", changes: 3, kind: "project" },
+        { name: "OldProject", path: "C:\\Demo\\OldProject", branch: "develop", changes: 0, kind: "recent" },
+      ] as T;
     case "AppAPI.PickFolder":
       return repo.rootPath as T;
     case "AppAPI.OpenRepository":
@@ -305,7 +312,12 @@ export async function mockInvoke<T>(group: string, method: string, args: any[]):
     case "AppAPI.OpenInExplorer":
     case "AppAPI.OpenExternal":
     case "App.SetTheme":
+    case "App.MinimizeWindow":
+    case "App.ToggleMaximizeWindow":
+    case "App.CloseWindow":
       return undefined as T;
+    case "App.IsWindowMaximized":
+      return false as T;
     default:
       throw new Error(`No mock for ${key}`);
   }

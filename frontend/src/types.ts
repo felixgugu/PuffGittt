@@ -132,10 +132,20 @@ export interface Settings {
   theme: "system" | "light" | "dark";
   language: "zh-TW" | "en";
   fontFamily: string;
+  baseFontSize: number;
   gitPath: string;
+  projectsRoot: string;
   authorName: string;
   authorEmail: string;
   recent: RecentRepo[];
+}
+
+export interface WorkspaceRepository {
+  name: string;
+  path: string;
+  branch: string;
+  changes: number;
+  kind: "project" | "recent" | string;
 }
 
 export interface Environment {

@@ -1,7 +1,16 @@
 import { useEffect, useState } from "react";
-import { Badge, Button, Divider, Field, Input, Select } from "@fluentui/react-components";
-import { Dismiss24Regular } from "@fluentui/react-icons";
+import {
+  Badge,
+  Button,
+  Divider,
+  Field,
+  Input,
+  Select,
+  Slider,
+} from "@fluentui/react-components";
+import { Dismiss24Regular, FolderOpen24Regular } from "@fluentui/react-icons";
 import { useTranslation } from "react-i18next";
+import { api } from "../bridge/api";
 import type { Environment, Settings } from "../types";
 
 interface SettingsPanelProps {
@@ -11,13 +20,16 @@ interface SettingsPanelProps {
   onSave: (settings: Settings) => void;
   onLanguageChange: (language: "zh-TW" | "en") => void;
   onThemeChange: (theme: "system" | "light" | "dark") => void;
+  onFontSizeChange: (size: number) => void;
 }
 
 const emptySettings: Settings = {
   theme: "system",
   language: "zh-TW",
   fontFamily: "",
+  baseFontSize: 14,
   gitPath: "",
+  projectsRoot: "",
   authorName: "",
   authorEmail: "",
   recent: [],
@@ -30,6 +42,7 @@ export function SettingsPanel({
   onSave,
   onLanguageChange,
   onThemeChange,
+  onFontSizeChange,
 }: SettingsPanelProps) {
   const { t } = useTranslation();
   const [draft, setDraft] = useState<Settings>(settings || emptySettings);
@@ -40,6 +53,11 @@ export function SettingsPanel({
 
   const update = <K extends keyof Settings>(key: K, value: Settings[K]) => {
     setDraft((current) => ({ ...current, [key]: value }));
+  };
+
+  const pickProjectsRoot = async () => {
+    const path = await api.app.pickFolder(t("settings.projectsRoot"));
+    if (path) update("projectsRoot", path);
   };
 
   return (
@@ -84,14 +102,47 @@ export function SettingsPanel({
                   <option value="en">English</option>
                 </Select>
               </Field>
+              <Field label={`${t("settings.fontSize")} (${draft.baseFontSize}px)`} hint={t("settings.fontSizeHint")}>
+                <Slider
+                  min={12}
+                  max={20}
+                  step={1}
+                  value={draft.baseFontSize}
+                  onChange={(_, data) => {
+                    update("baseFontSize", data.value);
+                    onFontSizeChange(data.value);
+                  }}
+                />
+              </Field>
+              <Field label={t("settings.fontFamily")}>
+                <Input
+                  value={draft.fontFamily}
+                  placeholder="Segoe UI Variable Text"
+                  onChange={(_, data) => update("fontFamily", data.value)}
+                />
+              </Field>
             </div>
           </section>
 
           <Divider />
 
           <section className="settings-section">
+            <h3>{t("settings.projects")}</h3>
+            <Field label={t("settings.projectsRoot")} hint={t("settings.projectsHint")}>
+              <div className="input-with-button">
+                <Input value={draft.projectsRoot} onChange={(_, data) => update("projectsRoot", data.value)} />
+                <Button icon={<FolderOpen24Regular />} onClick={() => void pickProjectsRoot()}>
+                  {t("settings.browse")}
+                </Button>
+              </div>
+            </Field>
+          </section>
+
+          <Divider />
+
+          <section className="settings-section">
             <h3>{t("settings.git")}</h3>
-            <Field label={t("settings.gitPath")} hint="Leave empty to use git from PATH">
+            <Field label={t("settings.gitPath")} hint={t("settings.gitPathHint")}>
               <Input
                 value={draft.gitPath}
                 placeholder="git.exe"
@@ -103,8 +154,6 @@ export function SettingsPanel({
                 {environment?.gitFound ? t("settings.gitFound") : t("settings.gitMissing")}
               </Badge>
               <span>{environment?.gitVersion || "-"}</span>
-              <span>{environment?.goVersion || "-"}</span>
-              <span>{environment?.wails || "-"}</span>
             </div>
           </section>
 
@@ -119,6 +168,22 @@ export function SettingsPanel({
               <Field label={t("settings.authorEmail")}>
                 <Input value={draft.authorEmail} onChange={(_, data) => update("authorEmail", data.value)} />
               </Field>
+            </div>
+          </section>
+
+          <Divider />
+
+          <section className="settings-section">
+            <h3>{t("settings.about")}</h3>
+            <div className="about-grid">
+              <span className="about-label">PuffGittt</span>
+              <span>v0.1.0</span>
+              <span className="about-label">{t("settings.gitVersion")}</span>
+              <span>{environment?.gitVersion || "-"}</span>
+              <span className="about-label">{t("settings.goVersion")}</span>
+              <span>{environment?.goVersion || "-"}</span>
+              <span className="about-label">{t("settings.wailsVersion")}</span>
+              <span>{environment?.wails || "-"}</span>
             </div>
           </section>
         </div>

@@ -1,15 +1,14 @@
 import { Badge } from "@fluentui/react-components";
 import { useTranslation } from "react-i18next";
-import type { Environment, Status } from "../types";
+import type { Status } from "../types";
 
 interface StatusBarProps {
   status?: Status;
-  environment?: Environment;
   language: string;
   message?: string;
 }
 
-export function StatusBar({ status, environment, language, message }: StatusBarProps) {
+export function StatusBar({ status, language, message }: StatusBarProps) {
   const { t } = useTranslation();
   return (
     <footer className="status-bar">
@@ -29,16 +28,13 @@ export function StatusBar({ status, environment, language, message }: StatusBarP
               <span>{t("status.noUpstream")}</span>
             )}
             {status.repo.operation !== "normal" ? (
-              <Badge appearance="tint" color="warning">
-                {status.repo.operation}
-              </Badge>
+              <Badge appearance="tint" color="warning">{status.repo.operation}</Badge>
             ) : null}
           </>
         ) : null}
       </div>
       <div className="status-message" title={message}>{message || ""}</div>
       <div className="status-right">
-        <span>{environment?.gitFound ? environment.gitVersion.replace("git version ", "Git ") : t("settings.gitMissing")}</span>
         <span>{language === "zh-TW" ? "繁體中文" : "English"}</span>
         <span>UTF-8</span>
       </div>

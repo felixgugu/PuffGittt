@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Badge,
   Button,
@@ -8,9 +8,6 @@ import {
   Textarea,
 } from "@fluentui/react-components";
 import {
-  ArrowDownload24Regular,
-  ArrowClockwise24Regular,
-  ArrowUndo24Regular,
   Checkmark24Regular,
   Delete24Regular,
   DocumentText24Regular,
@@ -19,89 +16,16 @@ import {
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
-import { useVirtualizer } from "@tanstack/react-virtual";
 import { api } from "../bridge/api";
 import { useAppStore, type RepoTab } from "../store";
 import type { FileChange } from "../types";
-import { changeCode, fileStatusClass, fileStatusLabel } from "../lib/format";
+import { FileTree } from "../components/FileTree";
 import { DiffEditor } from "../components/DiffEditor";
+import { fileHasStaged, fileHasUnstaged } from "../lib/fileTree";
+import { changeCode, fileStatusClass, fileStatusLabel } from "../lib/format";
 
 interface ChangesViewProps {
   tab: RepoTab;
-}
-
-interface VirtualFileListProps {
-  files: FileChange[];
-  side: "staged" | "unstaged";
-  selectedPath?: string;
-  selectedSide?: string;
-  onSelect: (file: FileChange, side: "staged" | "unstaged") => void;
-  onAction: (file: FileChange, side: "staged" | "unstaged") => void;
-  actionLabel: string;
-  emptyLabel: string;
-  busy: boolean;
-}
-
-function VirtualFileList({
-  files,
-  side,
-  selectedPath,
-  selectedSide,
-  onSelect,
-  onAction,
-  actionLabel,
-  emptyLabel,
-  busy,
-}: VirtualFileListProps) {
-  const parentRef = useRef<HTMLDivElement>(null);
-  const virtualizer = useVirtualizer({
-    count: files.length,
-    getScrollElement: () => parentRef.current,
-    estimateSize: () => 42,
-    overscan: 8,
-  });
-
-  if (files.length === 0) {
-    return <div className="file-empty">{emptyLabel}</div>;
-  }
-
-  return (
-    <div ref={parentRef} className="virtual-file-list">
-      <div style={{ height: virtualizer.getTotalSize(), position: "relative" }}>
-        {virtualizer.getVirtualItems().map((virtualRow) => {
-          const file = files[virtualRow.index];
-          const code = changeCode(file);
-          const active = selectedPath === file.path && selectedSide === side;
-          return (
-            <div
-              key={`${side}-${file.path}-${virtualRow.index}`}
-              className={`file-row${active ? " active" : ""}`}
-              style={{ transform: `translateY(${virtualRow.start}px)` }}
-              onClick={() => onSelect(file, side)}
-            >
-              <span className={`file-status ${fileStatusClass(code)}`}>{fileStatusLabel(code) || code}</span>
-              <span className="file-path" title={file.path}>{file.path}</span>
-              {file.kind !== "conflicted" ? (
-                <Button
-                  size="small"
-                  appearance="subtle"
-                  className="file-action"
-                  disabled={busy}
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    onAction(file, side);
-                  }}
-                  title={actionLabel}
-                >
-                  {side === "staged" ? <ArrowUndo24Regular /> : <ArrowDownload24Regular />}
-                </Button>
-              ) : null}
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
 }
 
 export function ChangesView({ tab }: ChangesViewProps) {
@@ -115,7 +39,6 @@ export function ChangesView({ tab }: ChangesViewProps) {
   const [subject, setSubject] = useState("");
   const [description, setDescription] = useState("");
   const [amend, setAmend] = useState(false);
-  const [diffSide, setDiffSide] = useState<"staged" | "unstaged">(tab.selectedFile?.side === "commit" ? "unstaged" : tab.selectedFile?.side || "unstaged");
 
   const statusQuery = useQuery({
     queryKey: ["status", root],
@@ -123,34 +46,34 @@ export function ChangesView({ tab }: ChangesViewProps) {
   });
   const status = statusQuery.data;
 
-  const stagedFiles = useMemo(
-    () => (status?.files || []).filter((file) => file.kind !== "untracked" && file.kind !== "conflicted" && file.indexStatus !== "."),
+  const trackedFiles = useMemo(
+    () => (status?.files || []).filter((file) => file.kind !== "untracked"),
     [status],
   );
-  const unstagedFiles = useMemo(
-    () => (status?.files || []).filter((file) => file.kind === "untracked" || file.kind === "conflicted" || file.worktreeStatus !== "."),
+  const untrackedFiles = useMemo(
+    () => (status?.files || []).filter((file) => file.kind === "untracked"),
     [status],
   );
 
   const selected = tab.selectedFile;
-  const selectedFile = selected ? status?.files.find((file) => file.path === selected.path) : undefined;
   const selectedSide = selected?.side === "staged" ? "staged" : "unstaged";
+  const selectedFile = selected ? status?.files.find((file) => file.path === selected.path) : undefined;
 
   useEffect(() => {
     if (!status) return;
-    const all = [...stagedFiles, ...unstagedFiles];
+    const all = [...trackedFiles, ...untrackedFiles];
     if (!selected || !all.some((file) => file.path === selected.path)) {
-      const first = unstagedFiles[0] || stagedFiles[0];
+      const first = trackedFiles.find(fileHasUnstaged) || trackedFiles.find(fileHasStaged) || untrackedFiles[0];
       if (first) {
         selectFile(root, {
           path: first.path,
-          side: unstagedFiles[0] ? "unstaged" : "staged",
+          side: fileHasUnstaged(first) ? "unstaged" : "staged",
         });
       } else {
         selectFile(root, undefined);
       }
     }
-  }, [root, selectFile, selected, stagedFiles, status, unstagedFiles]);
+  }, [root, selectFile, selected, status, trackedFiles, untrackedFiles]);
 
   const diffQuery = useQuery({
     queryKey: ["diff", root, selected?.path, selectedSide],
@@ -178,23 +101,23 @@ export function ChangesView({ tab }: ChangesViewProps) {
     }
   };
 
-  const handleStage = (file: FileChange, side: "staged" | "unstaged") =>
-    void run(t("changes.operationDone"), () => (side === "staged" ? api.change.unstage(root, [file.path]) : api.change.stage(root, [file.path])));
-
-  const handleStageAll = () => {
-    const paths = unstagedFiles.map((file) => file.path);
-    if (!paths.length) return;
-    void run(t("changes.operationDone"), () => api.change.stage(root, paths));
+  const stage = (files: FileChange[]) => {
+    if (!files.length) return;
+    void run(t("changes.operationDone"), () => api.change.stage(root, files.map((file) => file.path)));
   };
 
-  const handleUnstageAll = () => {
-    const paths = stagedFiles.map((file) => file.path);
-    if (!paths.length) return;
-    void run(t("changes.operationDone"), () => api.change.unstage(root, paths));
+  const unstage = (files: FileChange[]) => {
+    if (!files.length) return;
+    void run(t("changes.operationDone"), () => api.change.unstage(root, files.map((file) => file.path)));
   };
+
+  const stageAllTracked = () => stage(trackedFiles.filter(fileHasUnstaged));
+  const unstageAllTracked = () => unstage(trackedFiles.filter(fileHasStaged));
+  const stageAllUntracked = () => stage(untrackedFiles);
 
   const handleCommit = async () => {
-    if (!subject.trim() || stagedFiles.length === 0) return;
+    const stagedCount = trackedFiles.filter(fileHasStaged).length;
+    if (!subject.trim() || stagedCount === 0) return;
     const message = description.trim() ? `${subject.trim()}\n\n${description.trim()}` : subject.trim();
     setBusy(true);
     try {
@@ -216,77 +139,87 @@ export function ChangesView({ tab }: ChangesViewProps) {
     void run(t("changes.operationDone"), () => api.change.discard(root, [file.path]));
   };
 
+  const stagedCount = trackedFiles.filter(fileHasStaged).length;
+
   return (
     <div className="changes-view">
-      <div className="view-header">
-        <div>
-          <h1>{t("changes.title")}</h1>
-          <p>{tab.repo.rootPath}</p>
-        </div>
-        <div className="view-header-actions">
-          <Button icon={<ArrowClockwise24Regular />} onClick={() => statusQuery.refetch()} disabled={statusQuery.isFetching}>
-            {t("common.refresh")}
-          </Button>
-        </div>
-      </div>
-
-      <PanelGroup direction="horizontal" className="workspace-panels">
-        <Panel defaultSize={24} minSize={16} className="panel-shell">
-          <div className="panel-card file-panel">
-            <div className="panel-heading">
-              <span>{t("changes.files")}</span>
-              {statusQuery.isFetching ? <Spinner size="tiny" /> : null}
-            </div>
-            <div className="file-section">
-              <div className="file-section-heading">
-                <span>{t("changes.staged")} <Badge size="small" appearance="tint">{stagedFiles.length}</Badge></span>
-                <Button size="small" appearance="subtle" onClick={handleUnstageAll} disabled={busy || stagedFiles.length === 0}>
-                  {t("changes.unstageAll")}
-                </Button>
+      <PanelGroup direction="horizontal" className="changes-shell">
+        <Panel defaultSize={32} minSize={24} className="changes-left-panel">
+          <PanelGroup direction="vertical">
+            <Panel defaultSize={38} minSize={18} className="tree-panel-shell">
+              <div className="panel-card tree-card">
+                <FileTree
+                  key={`${root}-tracked`}
+                  title={t("changes.trackedFiles")}
+                  files={trackedFiles}
+                  storageKey={`${root}-tracked`}
+                  selectedPath={selected?.path}
+                  emptyText={t("changes.treeEmpty")}
+                  busy={busy}
+                  filterable
+                  onSelect={(file, side) => selectFile(root, { path: file.path, side })}
+                  onStage={(file) => stage([file])}
+                  onUnstage={(file) => unstage([file])}
+                  onStageAll={stageAllTracked}
+                  onUnstageAll={unstageAllTracked}
+                />
               </div>
-              <VirtualFileList
-                files={stagedFiles}
-                side="staged"
-                selectedPath={selected?.path}
-                selectedSide={selected?.side}
-                onSelect={(file, side) => {
-                  setDiffSide(side);
-                  selectFile(root, { path: file.path, side });
-                }}
-                onAction={handleStage}
-                actionLabel={t("changes.unstage")}
-                emptyLabel={t("changes.noStaged")}
-                busy={busy}
-              />
-            </div>
-            <div className="file-section">
-              <div className="file-section-heading">
-                <span>{t("changes.unstaged")} <Badge size="small" appearance="tint">{unstagedFiles.length}</Badge></span>
-                <Button size="small" appearance="subtle" onClick={handleStageAll} disabled={busy || unstagedFiles.length === 0}>
-                  {t("changes.stageAll")}
-                </Button>
+            </Panel>
+            <PanelResizeHandle className="resize-handle horizontal" />
+            <Panel defaultSize={26} minSize={18} className="tree-panel-shell">
+              <div className="panel-card commit-panel">
+                <div className="panel-heading"><span>{t("changes.commit")}</span><span className="muted">{t("changes.stagedCount", { count: stagedCount })}</span></div>
+                <div className="commit-form compact">
+                  <Input
+                    value={subject}
+                    onChange={(_, data) => setSubject(data.value)}
+                    placeholder={t("changes.commitSubject")}
+                    maxLength={120}
+                  />
+                  <Textarea
+                    value={description}
+                    onChange={(_, data) => setDescription(data.value)}
+                    placeholder={t("changes.commitDescription")}
+                    resize="vertical"
+                  />
+                  <div className="commit-form-footer">
+                    <Checkbox checked={amend} onChange={(_, data) => setAmend(!!data.checked)} label={t("changes.amend")} />
+                    <Button
+                      appearance="primary"
+                      icon={busy ? <Spinner size="tiny" /> : <Checkmark24Regular />}
+                      onClick={() => void handleCommit()}
+                      disabled={busy || stagedCount === 0 || !subject.trim()}
+                    >
+                      {t("changes.commitAction")}
+                    </Button>
+                  </div>
+                  <div className="commit-hint">{t("changes.commitTipStaged")}</div>
+                </div>
               </div>
-              <VirtualFileList
-                files={unstagedFiles}
-                side="unstaged"
-                selectedPath={selected?.path}
-                selectedSide={selected?.side}
-                onSelect={(file, side) => {
-                  setDiffSide(side);
-                  selectFile(root, { path: file.path, side });
-                }}
-                onAction={handleStage}
-                actionLabel={t("changes.stage")}
-                emptyLabel={t("changes.noUnstaged")}
-                busy={busy}
-              />
-            </div>
-          </div>
+            </Panel>
+            <PanelResizeHandle className="resize-handle horizontal" />
+            <Panel defaultSize={36} minSize={18} className="tree-panel-shell">
+              <div className="panel-card tree-card">
+                <FileTree
+                  key={`${root}-untracked`}
+                  title={t("changes.untrackedFiles")}
+                  files={untrackedFiles}
+                  storageKey={`${root}-untracked`}
+                  selectedPath={selected?.path}
+                  emptyText={t("changes.treeEmpty")}
+                  busy={busy}
+                  onSelect={(file, side) => selectFile(root, { path: file.path, side })}
+                  onStage={(file) => stage([file])}
+                  onStageAll={stageAllUntracked}
+                />
+              </div>
+            </Panel>
+          </PanelGroup>
         </Panel>
 
         <PanelResizeHandle className="resize-handle" />
 
-        <Panel defaultSize={46} minSize={24} className="panel-shell">
+        <Panel defaultSize={68} minSize={30} className="changes-content-panel">
           <div className="panel-card diff-panel">
             <div className="panel-heading">
               <span>{selected ? selected.path : t("changes.diff")}</span>
@@ -305,6 +238,12 @@ export function ChangesView({ tab }: ChangesViewProps) {
                 ) : null}
               </div>
             </div>
+            {selected && selectedFile ? (
+              <div className="selected-file-summary">
+                <span className={`selected-status ${fileStatusClass(changeCode(selectedFile))}`}>{fileStatusLabel(changeCode(selectedFile))}</span>
+                <span className="selected-path">{selectedFile.path}</span>
+              </div>
+            ) : null}
             {diffQuery.isLoading ? (
               <div className="center-state"><Spinner label={t("common.loading")} /></div>
             ) : diffQuery.data?.binary ? (
@@ -324,49 +263,6 @@ export function ChangesView({ tab }: ChangesViewProps) {
             ) : (
               <div className="center-state"><DocumentText24Regular /><p>{t("changes.selectFile")}</p></div>
             )}
-          </div>
-        </Panel>
-
-        <PanelResizeHandle className="resize-handle" />
-
-        <Panel defaultSize={30} minSize={20} className="panel-shell">
-          <div className="panel-card commit-panel">
-            <div className="panel-heading">
-              <span>{t("changes.commit")}</span>
-              <span className="muted">{t("changes.stagedCount", { count: stagedFiles.length })}</span>
-            </div>
-            <div className="commit-form">
-              <Input
-                value={subject}
-                onChange={(_, data) => setSubject(data.value)}
-                placeholder={t("changes.commitSubject")}
-                maxLength={120}
-              />
-              <Textarea
-                value={description}
-                onChange={(_, data) => setDescription(data.value)}
-                placeholder={t("changes.commitDescription")}
-                resize="vertical"
-              />
-              <Checkbox checked={amend} onChange={(_, data) => setAmend(!!data.checked)} label={t("changes.amend")} />
-              <Button
-                appearance="primary"
-                icon={busy ? <Spinner size="tiny" /> : <Checkmark24Regular />}
-                onClick={() => void handleCommit()}
-                disabled={busy || stagedFiles.length === 0 || !subject.trim()}
-              >
-                {t("changes.commitAction")}
-              </Button>
-              {stagedFiles.length > 0 ? (
-                <div className="commit-summary">
-                  <span>{t("changes.stagedCount", { count: stagedFiles.length })}</span>
-                </div>
-              ) : null}
-            </div>
-            <div className="commit-tips">
-              <div><span className="tip-dot" />{t("changes.commitTipStaged")}</div>
-              <div><span className="tip-dot" />{t("changes.staged")} → Commit → Repository</div>
-            </div>
           </div>
         </Panel>
       </PanelGroup>

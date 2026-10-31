@@ -16,4 +16,44 @@ import "../node_modules/monaco-editor/min/vs/editor/editor.main.css";
   },
 };
 
+monaco.editor.defineTheme("puff-light", {
+  base: "vs",
+  inherit: true,
+  rules: [],
+  colors: {
+    "editor.background": "#fffdfa",
+    "editor.lineHighlightBackground": "#f2efe8",
+    "editorLineNumber.foreground": "#a9a49a",
+    "editorGutter.background": "#fffdfa",
+    "diffEditor.insertedLineBackground": "#e4f1e8",
+    "diffEditor.removedLineBackground": "#f6e6e1",
+    "diffEditor.insertedTextBackground": "#b9dcc4",
+    "diffEditor.removedTextBackground": "#efc4b8",
+    "diffEditor.border": "#e0dcd3",
+    "scrollbarSlider.background": "#315d5522",
+    "scrollbarSlider.hoverBackground": "#315d5533",
+  },
+});
+
+monaco.editor.defineTheme("puff-dark", {
+  base: "vs-dark",
+  inherit: true,
+  rules: [],
+  colors: {
+    "editor.background": "#1e201d",
+    "editor.lineHighlightBackground": "#242621",
+    "editorLineNumber.foreground": "#6d6a63",
+    "editorGutter.background": "#1e201d",
+    "diffEditor.insertedLineBackground": "#1d2c25",
+    "diffEditor.removedLineBackground": "#2d211e",
+    "diffEditor.insertedTextBackground": "#2f5747",
+    "diffEditor.removedTextBackground": "#5a3730",
+    "diffEditor.border": "#2c2e29",
+    "scrollbarSlider.background": "#8bc7b822",
+    "scrollbarSlider.hoverBackground": "#8bc7b833",
+  },
+});
+
+export const monacoTheme = (dark: boolean) => (dark ? "puff-dark" : "puff-light");
+
 export { monaco };

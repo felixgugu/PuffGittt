@@ -38,6 +38,7 @@ func main() {
 		Height:           900,
 		MinWidth:         1024,
 		MinHeight:        680,
+		Frameless:        true,
 		WindowStartState: options.Maximised,
 		AssetServer: &assetserver.Options{
 			Assets: assets,
@@ -71,5 +72,3 @@ func main() {
 		log.Fatal(err)
 	}
 }
-
-

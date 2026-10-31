@@ -126,13 +126,23 @@ type RecentRepo struct {
 }
 
 type Settings struct {
-	Theme       string       `json:"theme"`
-	Language    string       `json:"language"`
-	FontFamily  string       `json:"fontFamily"`
-	GitPath     string       `json:"gitPath"`
-	AuthorName  string       `json:"authorName"`
-	AuthorEmail string       `json:"authorEmail"`
-	Recent      []RecentRepo `json:"recent"`
+	Theme        string       `json:"theme"`
+	Language     string       `json:"language"`
+	FontFamily   string       `json:"fontFamily"`
+	BaseFontSize int          `json:"baseFontSize"`
+	GitPath      string       `json:"gitPath"`
+	ProjectsRoot string       `json:"projectsRoot"`
+	AuthorName   string       `json:"authorName"`
+	AuthorEmail  string       `json:"authorEmail"`
+	Recent       []RecentRepo `json:"recent"`
+}
+
+type WorkspaceRepository struct {
+	Name    string `json:"name"`
+	Path    string `json:"path"`
+	Branch  string `json:"branch"`
+	Changes int    `json:"changes"`
+	Kind    string `json:"kind"`
 }
 
 type Environment struct {

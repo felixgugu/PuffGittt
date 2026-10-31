@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/felixgugu/puffgittt/internal/config"
+	"github.com/felixgugu/puffgittt/internal/model"
 )
 
 func runGit(t *testing.T, dir string, args ...string) {
@@ -88,5 +89,48 @@ func TestFacadesAgainstRealRepository(t *testing.T) {
 	}
 	if len(commits) != 2 || commits[0].Subject != "second" {
 		t.Fatalf("commits = %#v", commits)
+	}
+}
+
+func TestListWorkspaceRepositories(t *testing.T) {
+	projects := t.TempDir()
+	repoDir := filepath.Join(projects, "alpha")
+	if err := os.MkdirAll(repoDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	runGit(t, repoDir, "init", "--initial-branch", "main")
+	runGit(t, repoDir, "config", "user.email", "test@example.com")
+	runGit(t, repoDir, "config", "user.name", "Test User")
+	if err := os.WriteFile(filepath.Join(repoDir, "hello.txt"), []byte("hello\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	runGit(t, repoDir, "add", "hello.txt")
+	runGit(t, repoDir, "commit", "-m", "initial")
+	if err := os.WriteFile(filepath.Join(repoDir, "untracked.txt"), []byte("new\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	cfg := &config.Config{
+		AppDir:      t.TempDir(),
+		SettingsDir: t.TempDir(),
+		CacheDir:    t.TempDir(),
+		LogDir:      t.TempDir(),
+		BackupDir:   t.TempDir(),
+	}
+	settings := cfg.LoadSettings()
+	settings.ProjectsRoot = projects
+	settings.Recent = []model.RecentRepo{{Path: repoDir, Name: "alpha", LastOpened: "2026-01-01T00:00:00Z"}}
+	if err := cfg.SaveSettings(settings); err != nil {
+		t.Fatal(err)
+	}
+
+	service := New(cfg)
+	service.SetContext(context.Background())
+	repos := NewAppAPI(service).ListWorkspaceRepositories()
+	if len(repos) != 1 {
+		t.Fatalf("expected deduplicated repository list, got %#v", repos)
+	}
+	if repos[0].Name != "alpha" || repos[0].Kind != "project" || repos[0].Changes != 1 {
+		t.Fatalf("repository = %#v", repos[0])
 	}
 }

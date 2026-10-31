@@ -8,17 +8,31 @@ This file tracks the gap between the current PuffGittt build and
 ### Shell and platform
 - Go + Wails v2 desktop shell, embedded Vite build.
 - React 19 + TypeScript + Fluent UI v9 application shell.
-- Native Windows title bar, Mica background, system/light/dark theme.
-- Windows icon generated from `appicon.png`.
-- Multi-repository tabs, recent repositories, singleton process-level settings.
+- Frameless window with an integrated title bar: repository tabs, open folder,
+  Settings, Minimize, Maximize/Restore and Close, plus drag and double-click
+  maximize.
+- Warm PuffJoplin-inspired design tokens for light/dark mode, shared font scale
+  (`--base-font-size`, 12–20 px) and consistent icon/control metrics.
+- Collapsible, resizable sidebar (240 px expanded / 72 px collapsed) with
+  persisted state.
+- Sidebar workspace list built from the projects folder and recently opened
+  repositories, deduplicated and enriched with branch and change counts.
+- Windows icon generated from `appicon.png`; brand art removed from main screens.
+- Multi-repository tabs and singleton process-level settings.
 - Traditional Chinese default locale and English locale switch.
 - Welcome view with open, clone and init flows.
-- Settings dialog for theme, language, Git path and commit identity.
+- Settings dialog for theme, language, base font size, font family, projects
+  folder, Git path and commit identity; About block includes Git/Go/Wails
+  versions.
 
 ### Repository and changes
 - Repository validation through `git rev-parse`.
 - Status parsing via `git status --porcelain=v2 -z --branch`.
 - Staged, unstaged, untracked and conflicted file classification.
+- Changes screen with a resizable layout: directory-tree file list, commit
+  composer and untracked tree on the left; a full-height diff on the right.
+- Directory trees with expand/collapse, staged/unstaged filter, per-file status
+  badges, inline stage/unstage actions and persisted expansion state.
 - Whole-file stage/unstage.
 - Discard tracked/untracked paths (without backup/undo).
 - Monaco diff with inline/split toggle.
@@ -77,6 +91,15 @@ This file tracks the gap between the current PuffGittt build and
   focus model or screen-reader pass.
 - **Mock bridge**: browser-only Vite development uses demo data; the Wails build
   uses real Go bindings.
+- **Workspace repository list**: scans one level below the configured projects
+  folder plus recent entries; no recursive scan, pinning, drag-and-drop or
+  per-repository context menu yet.
+- **Tabs and window state**: open tabs are session-only and window size/position
+  is not restored between launches.
+- **Shell keyboard model**: shortcuts cover open, settings and the first three
+  views; title-bar and repository-list focus navigation is not complete.
+- **Settings drafts**: theme, language and font-size changes preview live; cancel
+  does not roll the preview back until the next launch.
 
 ## Not started
 

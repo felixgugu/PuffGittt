@@ -37,3 +37,25 @@ func (a *App) SetTheme(mode string) {
 		runtime.WindowSetSystemDefaultTheme(a.ctx)
 	}
 }
+
+func (a *App) MinimizeWindow() {
+	if a.ctx != nil {
+		runtime.WindowMinimise(a.ctx)
+	}
+}
+
+func (a *App) ToggleMaximizeWindow() {
+	if a.ctx != nil {
+		runtime.WindowToggleMaximise(a.ctx)
+	}
+}
+
+func (a *App) CloseWindow() {
+	if a.ctx != nil {
+		runtime.Quit(a.ctx)
+	}
+}
+
+func (a *App) IsWindowMaximized() bool {
+	return a.ctx != nil && runtime.WindowIsMaximised(a.ctx)
+}

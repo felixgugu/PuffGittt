@@ -22,6 +22,7 @@ interface AppState {
   activeId?: string;
   theme: ThemeMode;
   language: "zh-TW" | "en";
+  sidebarCollapsed: boolean;
   settings?: Settings;
   environment?: Environment;
   statusMessage?: string;
@@ -33,6 +34,7 @@ interface AppState {
   selectCommit: (id: string, oid?: string) => void;
   setTheme: (theme: ThemeMode) => void;
   setLanguage: (language: "zh-TW" | "en") => void;
+  setSidebarCollapsed: (collapsed: boolean) => void;
   setSettings: (settings: Settings) => void;
   setEnvironment: (environment: Environment) => void;
   setStatusMessage: (message?: string) => void;
@@ -45,6 +47,7 @@ export const useAppStore = create<AppState>()(
       tabs: [],
       theme: "system",
       language: "zh-TW",
+      sidebarCollapsed: false,
       openTab: (repo) => {
         const existing = get().tabs.find((tab) => tab.repo.rootPath === repo.rootPath);
         if (existing) {
@@ -79,6 +82,7 @@ export const useAppStore = create<AppState>()(
         }),
       setTheme: (theme) => set({ theme }),
       setLanguage: (language) => set({ language }),
+      setSidebarCollapsed: (sidebarCollapsed) => set({ sidebarCollapsed }),
       setSettings: (settings) => {
         set({ settings, theme: settings.theme as ThemeMode, language: settings.language });
       },
@@ -91,7 +95,11 @@ export const useAppStore = create<AppState>()(
     }),
     {
       name: "puffgittt:ui",
-      partialize: (state) => ({ theme: state.theme, language: state.language }),
+      partialize: (state) => ({
+        theme: state.theme,
+        language: state.language,
+        sidebarCollapsed: state.sidebarCollapsed,
+      }),
     },
   ),
 );

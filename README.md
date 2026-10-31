@@ -41,8 +41,9 @@ wails build
 ## Implemented in this build
 
 - Multi-repository tabs with a Welcome experience: open, clone, init, recent repositories.
-- Changes workspace: staged/unstaged/untracked/conflicted files, stage/unstage, discard,
-  virtualized file lists, Monaco diff (inline/split), commit composer, amend.
+- Changes workspace: directory filter tree, commit composer and untracked tree in a
+  resizable left column with a full-height Monaco diff; stage/unstage, discard,
+  amend, inline/split diff.
 - History: branch filter, commit search, virtualized commit list, SVG lane graph,
   commit details, changed files and commit diff.
 - Branches: local and remote lists, create, switch, delete, merge.
@@ -50,8 +51,11 @@ wails build
 - Conflicts: conflict list, three-way content, editable result, mark resolved,
   continue/abort for in-progress operations.
 - Stashes: list, create, apply, pop, drop.
-- Settings: theme, language, Git executable path, commit identity, environment info.
-- Traditional Chinese / English UI, light/dark/system themes, Mica window, native title bar.
+- Settings: theme, language, base font size and family, projects folder,
+  Git executable path, commit identity, and About/environment versions.
+- Frameless window with an integrated title bar; collapsible sidebar with a
+  projects/recent repository list pinned at the bottom.
+- Traditional Chinese / English UI, warm light/dark theme tokens and scalable typography.
 - Windows application icon generated from `appicon.png`.
 
 ## Not implemented yet
