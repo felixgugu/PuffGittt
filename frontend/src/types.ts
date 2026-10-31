@@ -82,6 +82,23 @@ export interface CommitFile {
   status: string;
 }
 
+export interface CompareCommit {
+  oid: string;
+  subject: string;
+  author: string;
+  date: string;
+}
+
+export interface BranchCompare {
+  base: string;
+  compare: string;
+  ahead: number;
+  behind: number;
+  aheadCommits: CompareCommit[];
+  behindCommits: CompareCommit[];
+  files: CommitFile[];
+}
+
 export interface CommitDetail {
   commit: Commit;
   files: CommitFile[];

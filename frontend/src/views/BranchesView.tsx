@@ -58,6 +58,9 @@ export function BranchesView({ tab }: BranchesViewProps) {
   const [editingRemote, setEditingRemote] = useState<string | null>(null);
   const [remoteFormName, setRemoteFormName] = useState("");
   const [remoteFormUrl, setRemoteFormUrl] = useState("");
+  const [compareOpen, setCompareOpen] = useState(false);
+  const [compareBase, setCompareBase] = useState("");
+  const [compareBranch, setCompareBranch] = useState("");
 
   const branches = useQuery({ queryKey: ["branches", root], queryFn: () => api.repo.getBranches(root) });
   const remotes = useQuery({ queryKey: ["remotes", root], queryFn: () => api.sync.listRemotes(root) });
@@ -65,6 +68,12 @@ export function BranchesView({ tab }: BranchesViewProps) {
   const remote = (branches.data || []).filter((branch) => branch.kind === "remote");
   const selected = local.find((branch) => branch.name === selectedName) || local.find((branch) => branch.current) || local[0];
   const remoteName = selected?.upstream?.split("/")[0] || remotes.data?.[0]?.name || "";
+  const currentBranch = local.find((branch) => branch.current);
+  const compareQuery = useQuery({
+    queryKey: ["compare", root, compareBase, compareBranch],
+    queryFn: () => api.branch.compare(root, compareBase, compareBranch),
+    enabled: compareOpen && !!compareBase && !!compareBranch,
+  });
 
   useEffect(() => {
     setSelectedName("");
@@ -426,6 +435,13 @@ export function BranchesView({ tab }: BranchesViewProps) {
     setView(root, "history");
   };
 
+  const openCompare = (branch: Branch) => {
+    if (!currentBranch) return;
+    setCompareBase(currentBranch.name);
+    setCompareBranch(branch.name);
+    setCompareOpen(true);
+  };
+
   const fetchTooltip = remoteName ? t("branches.fetchHint", { remote: remoteName }) : t("branches.noRemote");
   const pullTooltip = selected && !selected.current ? t("branches.pullCurrentOnly") : t("toolbar.pull");
 
@@ -639,6 +655,12 @@ export function BranchesView({ tab }: BranchesViewProps) {
                     disabled: branchMenu.branch.current || !!busy,
                     onSelect: () => requestRebase(branchMenu.branch),
                   },
+                  {
+                    key: "compare",
+                    label: `比較 ${currentName} 與 ${branchMenu.branch.name}…`,
+                    disabled: branchMenu.branch.current || !currentBranch || !!busy,
+                    onSelect: () => openCompare(branchMenu.branch),
+                  },
                   { divider: true },
                   {
                     key: "rename",
@@ -816,6 +838,81 @@ export function BranchesView({ tab }: BranchesViewProps) {
               >
                 {busy === "remote" ? <Spinner size="tiny" /> : editingRemote ? "儲存 URL" : "新增 Remote"}
               </Button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {compareOpen ? (
+        <div
+          className="modal-backdrop"
+          onMouseDown={(event) => event.target === event.currentTarget && setCompareOpen(false)}
+        >
+          <div className="modal compare-modal" role="dialog" aria-modal="true" aria-label="比較分支">
+            <div className="modal-header">
+              <h2>比較分支</h2>
+              <Button appearance="subtle" icon={<Dismiss24Regular />} onClick={() => setCompareOpen(false)} />
+            </div>
+            <div className="modal-body form-stack">
+              <div className="compare-controls">
+                <Field label="Base">
+                  <UnderlineSelect value={compareBase} onChange={(_, data) => setCompareBase(data.value)}>
+                    {local.map((entry) => (
+                      <option key={entry.name} value={entry.name}>
+                        {entry.name}
+                      </option>
+                    ))}
+                  </UnderlineSelect>
+                </Field>
+                <span className="compare-arrow">↔</span>
+                <Field label="Compare">
+                  <UnderlineSelect value={compareBranch} onChange={(_, data) => setCompareBranch(data.value)}>
+                    {local.map((entry) => (
+                      <option key={entry.name} value={entry.name}>
+                        {entry.name}
+                      </option>
+                    ))}
+                  </UnderlineSelect>
+                </Field>
+              </div>
+              {compareQuery.isLoading ? (
+                <div className="center-state"><Spinner label={t("common.loading")} /></div>
+              ) : compareQuery.data ? (
+                <>
+                  <div className="compare-summary">
+                    <span><strong>{compareQuery.data.compare}</strong> 領先 {compareQuery.data.ahead} commits</span>
+                    <span><strong>{compareQuery.data.base}</strong> 領先 {compareQuery.data.behind} commits</span>
+                    <span>{compareQuery.data.files.length} 個檔案不同</span>
+                  </div>
+                  <div className="compare-columns">
+                    <div className="compare-column">
+                      <h3>只在 {compareQuery.data.compare}</h3>
+                      {compareQuery.data.aheadCommits.length === 0 ? <div className="empty-state">沒有 Commit</div> : null}
+                      {compareQuery.data.aheadCommits.map((commit) => (
+                        <div className="compare-commit" key={commit.oid}>
+                          <code>{shortOid(commit.oid)}</code>
+                          <span title={commit.subject}>{commit.subject}</span>
+                          <span className="muted">{commit.author}</span>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="compare-column">
+                      <h3>只在 {compareQuery.data.base}</h3>
+                      {compareQuery.data.behindCommits.length === 0 ? <div className="empty-state">沒有 Commit</div> : null}
+                      {compareQuery.data.behindCommits.map((commit) => (
+                        <div className="compare-commit" key={commit.oid}>
+                          <code>{shortOid(commit.oid)}</code>
+                          <span title={commit.subject}>{commit.subject}</span>
+                          <span className="muted">{commit.author}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </>
+              ) : null}
+            </div>
+            <div className="modal-footer">
+              <Button appearance="secondary" onClick={() => setCompareOpen(false)}>關閉</Button>
             </div>
           </div>
         </div>

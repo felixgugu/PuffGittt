@@ -499,6 +499,10 @@ func (a *BranchAPI) Preview(root string, req model.CommandRequest) (model.Comman
 	return a.s.runnerWithSettings().PreviewBranchCommand(a.s.context(), root, req)
 }
 
+func (a *BranchAPI) Compare(root, base, compare string) (model.BranchCompare, error) {
+	return a.s.runnerWithSettings().CompareBranches(a.s.context(), root, base, compare)
+}
+
 func (a *SyncAPI) ListRemotes(root string) ([]model.Remote, error) {
 	return a.s.runnerWithSettings().Remotes(a.s.context(), root)
 }

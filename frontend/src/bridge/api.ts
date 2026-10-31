@@ -1,6 +1,7 @@
 import { mockInvoke } from "./mock";
 import type {
   Branch,
+  BranchCompare,
   CommandPreview,
   CommandRequest,
   Commit,
@@ -135,6 +136,8 @@ export const api = {
     rebase: (root: string, onto: string) => invoke<OperationResult>("BranchAPI", "Rebase", root, onto),
     preview: (root: string, request: CommandRequest) =>
       invoke<CommandPreview>("BranchAPI", "Preview", root, request),
+    compare: (root: string, base: string, compare: string) =>
+      invoke<BranchCompare>("BranchAPI", "Compare", root, base, compare),
   },
   sync: {
     listRemotes: (root: string) => invoke<Remote[]>("SyncAPI", "ListRemotes", root),

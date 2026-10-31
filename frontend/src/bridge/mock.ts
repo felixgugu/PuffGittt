@@ -1,5 +1,6 @@
 import type {
   Branch,
+  BranchCompare,
   CommandPreview,
   CommandRequest,
   Commit,
@@ -331,6 +332,26 @@ export async function mockInvoke<T>(group: string, method: string, args: any[]):
       return ok("Upstream updated") as T;
     case "BranchAPI.CheckoutRemote":
       return ok("Checked out remote branch") as T;
+    case "BranchAPI.Compare":
+      return {
+        base: args[1],
+        compare: args[2],
+        ahead: 2,
+        behind: 1,
+        aheadCommits: commits.slice(0, 2).map((commit) => ({
+          oid: commit.oid,
+          subject: commit.subject,
+          author: commit.author,
+          date: commit.authorTime,
+        })),
+        behindCommits: commits.slice(2, 3).map((commit) => ({
+          oid: commit.oid,
+          subject: commit.subject,
+          author: commit.author,
+          date: commit.authorTime,
+        })),
+        files: [],
+      } as BranchCompare as T;
     case "BranchAPI.Preview": {
       const request = args[1] as CommandRequest;
       const commands: Record<string, string> = {

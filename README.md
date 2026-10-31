@@ -55,9 +55,9 @@ wails build
   (including merge mainline selection), all through a right-click context menu
   with Git command previews.
 - Branches: local and remote lists, create, switch, merge, rebase, rename, delete,
-  set upstream, publish, checkout remote branch and delete remote branch through
-  right-click context menus, with merge/rebase direction labels and Git command
-  confirmation dialogs.
+  set upstream, publish, checkout remote branch, delete remote branch and branch
+  comparison through right-click context menus, with merge/rebase direction labels
+  and Git command confirmation dialogs.
 - Remote management: add remotes, edit fetch/push URLs and remove remotes.
 - Sync: fetch, pull, push, force-with-lease push, with Git command previews and
   branch ahead/behind status.

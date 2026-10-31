@@ -79,6 +79,7 @@ This file tracks the gap between the current PuffGittt build and
   publish, force push and delete.
 - Right-click remote branch context menu for checkout and remote deletion.
 - Remote management: add, edit URL and remove remotes.
+- Branch comparison dialog with ahead/behind counts, unique commits and changed files.
 - Fetch, pull (merge/rebase/ff-only strategy API) and push with command previews.
 - Force-with-lease push.
 - Ahead/behind status.
@@ -117,7 +118,8 @@ This file tracks the gap between the current PuffGittt build and
   clean; there is no backup retention or multi-step undo history.
 - **Merge/rebase**: basic Git commands only; no strategy planner, expected-head
   validation or detailed conflict-aware recovery UI.
-- **Branch compare**: no `base...compare` commit/file comparison screen.
+- **Branch compare**: ahead/behind counts, unique commits and changed files are
+  listed, but there is no inline file diff from the compare dialog yet.
 - **Commit graph**: functional lane algorithm but not the full frontier/cross-page
   snapshot implementation described in the spec.
 - **Search**: commit subject search only; author/SHA/path search not complete.

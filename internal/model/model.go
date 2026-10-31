@@ -85,6 +85,23 @@ type CommitFile struct {
 	Status string `json:"status"`
 }
 
+type CompareCommit struct {
+	Oid     string `json:"oid"`
+	Subject string `json:"subject"`
+	Author  string `json:"author"`
+	Date    string `json:"date"`
+}
+
+type BranchCompare struct {
+	Base          string          `json:"base"`
+	Compare       string          `json:"compare"`
+	Ahead         int             `json:"ahead"`
+	Behind        int             `json:"behind"`
+	AheadCommits  []CompareCommit `json:"aheadCommits"`
+	BehindCommits []CompareCommit `json:"behindCommits"`
+	Files         []CommitFile    `json:"files"`
+}
+
 type CommitDetail struct {
 	Commit Commit       `json:"commit"`
 	Files  []CommitFile `json:"files"`
