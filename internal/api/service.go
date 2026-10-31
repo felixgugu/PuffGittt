@@ -527,6 +527,31 @@ func (a *BranchAPI) Compare(root, base, compare string) (model.BranchCompare, er
 	return a.s.runnerWithSettings().CompareBranches(a.s.context(), root, base, compare)
 }
 
+func (a *BranchAPI) Worktrees(root string) ([]model.Worktree, error) {
+	return a.s.runnerWithSettings().Worktrees(a.s.context(), root)
+}
+
+func (a *BranchAPI) AddWorktree(root, path, branch string, createBranch bool) (model.OperationResult, error) {
+	mu := a.s.repoLock(root)
+	mu.Lock()
+	defer mu.Unlock()
+	return a.s.runnerWithSettings().AddWorktree(a.s.context(), root, path, branch, createBranch)
+}
+
+func (a *BranchAPI) RemoveWorktree(root, path string, force bool) (model.OperationResult, error) {
+	mu := a.s.repoLock(root)
+	mu.Lock()
+	defer mu.Unlock()
+	return a.s.runnerWithSettings().RemoveWorktree(a.s.context(), root, path, force)
+}
+
+func (a *BranchAPI) PruneWorktrees(root string) (model.OperationResult, error) {
+	mu := a.s.repoLock(root)
+	mu.Lock()
+	defer mu.Unlock()
+	return a.s.runnerWithSettings().PruneWorktrees(a.s.context(), root)
+}
+
 func (a *SyncAPI) ListRemotes(root string) ([]model.Remote, error) {
 	return a.s.runnerWithSettings().Remotes(a.s.context(), root)
 }

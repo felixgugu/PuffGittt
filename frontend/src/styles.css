@@ -1281,6 +1281,17 @@ svg {
   color: var(--text-secondary);
 }
 
+.inline-field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.inline-field > *:first-child {
+  flex: 1;
+  min-width: 0;
+}
+
 .compare-modal {
   width: min(920px, 94vw);
 }

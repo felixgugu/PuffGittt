@@ -21,6 +21,7 @@ import type {
   Status,
   Tag,
   UndoRecord,
+  Worktree,
 } from "../types";
 
 const now = () => new Date().toISOString();
@@ -378,6 +379,15 @@ export async function mockInvoke<T>(group: string, method: string, args: any[]):
         })),
         files: [],
       } as BranchCompare as T;
+    case "BranchAPI.Worktrees":
+      return [
+        { path: repo.rootPath, head: repo.headOid, branch: repo.branch },
+        { path: `${repo.rootPath}-worktree`, head: repo.headOid, branch: "feature/demo" },
+      ] as Worktree[] as T;
+    case "BranchAPI.AddWorktree":
+    case "BranchAPI.RemoveWorktree":
+    case "BranchAPI.PruneWorktrees":
+      return ok("Worktree updated") as T;
     case "BranchAPI.Preview": {
       const request = args[1] as CommandRequest;
       const commands: Record<string, string> = {

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Badge, Button, Field, Spinner } from "@fluentui/react-components";
+import { Badge, Button, Checkbox, Field, Spinner } from "@fluentui/react-components";
 import {
   Add24Regular,
   ArrowClockwise24Regular,
@@ -8,6 +8,7 @@ import {
   ArrowUpload24Regular,
   Branch24Regular,
   Dismiss24Regular,
+  FolderAdd24Regular,
   History24Regular,
   Settings24Regular,
 } from "@fluentui/react-icons";
@@ -61,6 +62,10 @@ export function BranchesView({ tab }: BranchesViewProps) {
   const [compareOpen, setCompareOpen] = useState(false);
   const [compareBase, setCompareBase] = useState("");
   const [compareBranch, setCompareBranch] = useState("");
+  const [worktreesOpen, setWorktreesOpen] = useState(false);
+  const [worktreePath, setWorktreePath] = useState("");
+  const [worktreeBranch, setWorktreeBranch] = useState("");
+  const [worktreeCreateBranch, setWorktreeCreateBranch] = useState(false);
 
   const branches = useQuery({ queryKey: ["branches", root], queryFn: () => api.repo.getBranches(root) });
   const remotes = useQuery({ queryKey: ["remotes", root], queryFn: () => api.sync.listRemotes(root) });
@@ -74,6 +79,11 @@ export function BranchesView({ tab }: BranchesViewProps) {
     queryFn: () => api.branch.compare(root, compareBase, compareBranch),
     enabled: compareOpen && !!compareBase && !!compareBranch,
   });
+  const worktrees = useQuery({
+    queryKey: ["worktrees", root],
+    queryFn: () => api.branch.worktrees(root),
+    enabled: worktreesOpen,
+  });
 
   useEffect(() => {
     setSelectedName("");
@@ -84,6 +94,7 @@ export function BranchesView({ tab }: BranchesViewProps) {
     void queryClient.invalidateQueries({ queryKey: ["status", root] });
     void queryClient.invalidateQueries({ queryKey: ["history", root] });
     void queryClient.invalidateQueries({ queryKey: ["remotes", root] });
+    void queryClient.invalidateQueries({ queryKey: ["worktrees", root] });
   };
 
   const run = async (key: string, action: () => Promise<{ message: string }>) => {
@@ -374,6 +385,43 @@ export function BranchesView({ tab }: BranchesViewProps) {
     if (ok && editingRemote === name) resetRemoteForm();
   };
 
+  const openWorktrees = () => {
+    setWorktreePath("");
+    setWorktreeBranch("");
+    setWorktreeCreateBranch(false);
+    setWorktreesOpen(true);
+  };
+
+  const pickWorktreePath = async () => {
+    try {
+      const path = await api.app.pickFolder("選擇 Worktree 資料夾");
+      if (path) setWorktreePath(path);
+    } catch (error: any) {
+      setStatusMessage(error?.message || String(error));
+    }
+  };
+
+  const addWorktree = async () => {
+    if (!worktreePath.trim() || !worktreeBranch.trim()) return;
+    const ok = await run("worktree", () =>
+      api.branch.addWorktree(root, worktreePath.trim(), worktreeBranch.trim(), worktreeCreateBranch),
+    );
+    if (ok) {
+      setWorktreePath("");
+      setWorktreeBranch("");
+      setWorktreeCreateBranch(false);
+    }
+  };
+
+  const removeWorktree = async (path: string) => {
+    if (!window.confirm(`確定要移除 Worktree ${path}？`)) return;
+    await run("worktree", () => api.branch.removeWorktree(root, path, true));
+  };
+
+  const pruneWorktrees = async () => {
+    await run("worktree", () => api.branch.pruneWorktrees(root));
+  };
+
   const handleCreate = async () => {
     const name = newName.trim();
     if (!name) return;
@@ -525,6 +573,16 @@ export function BranchesView({ tab }: BranchesViewProps) {
                   icon={busy === "push" ? <Spinner size="tiny" /> : <ArrowUpload24Regular />}
                   onClick={handlePush}
                   disabled={!selected || !remoteName || !!busy}
+                />
+              </span>
+              <span className="branch-icon-button" data-tooltip="Worktrees">
+                <Button
+                  size="small"
+                  appearance="subtle"
+                  aria-label="Worktrees"
+                  icon={<FolderAdd24Regular />}
+                  onClick={openWorktrees}
+                  disabled={!!busy}
                 />
               </span>
               <span className="branch-icon-button" data-tooltip={t("branches.create")}>
@@ -837,6 +895,80 @@ export function BranchesView({ tab }: BranchesViewProps) {
                 disabled={!!busy || !remoteFormUrl.trim() || (!editingRemote && !remoteFormName.trim())}
               >
                 {busy === "remote" ? <Spinner size="tiny" /> : editingRemote ? "儲存 URL" : "新增 Remote"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {worktreesOpen ? (
+        <div
+          className="modal-backdrop"
+          onMouseDown={(event) => event.target === event.currentTarget && !busy && setWorktreesOpen(false)}
+        >
+          <div className="modal small" role="dialog" aria-modal="true" aria-label="Worktrees">
+            <div className="modal-header">
+              <h2>Worktrees</h2>
+              <Button appearance="subtle" icon={<Dismiss24Regular />} onClick={() => setWorktreesOpen(false)} disabled={!!busy} />
+            </div>
+            <div className="modal-body form-stack">
+              <div className="remote-list">
+                {(worktrees.data || []).map((entry) => (
+                  <div className="remote-row" key={entry.path}>
+                    <div className="remote-copy">
+                      <strong>{entry.branch || (entry.detached ? "(detached)" : entry.head)}</strong>
+                      <span title={entry.path}>{entry.path}</span>
+                    </div>
+                    <Button
+                      size="small"
+                      appearance="subtle"
+                      disabled={!!busy}
+                      onClick={() => void removeWorktree(entry.path)}
+                    >
+                      移除
+                    </Button>
+                  </div>
+                ))}
+                {(worktrees.data || []).length === 0 ? <div className="empty-state">沒有 Worktree</div> : null}
+              </div>
+              <Field label="新 Worktree 路徑">
+                <div className="inline-field">
+                  <UnderlineInput
+                    value={worktreePath}
+                    onChange={(_, data) => setWorktreePath(data.value)}
+                    placeholder="C:\\projects\\repo-feature"
+                  />
+                  <Button size="small" appearance="subtle" onClick={() => void pickWorktreePath()} disabled={!!busy}>
+                    瀏覽…
+                  </Button>
+                </div>
+              </Field>
+              <Field label="分支">
+                <UnderlineInput
+                  value={worktreeBranch}
+                  onChange={(_, data) => setWorktreeBranch(data.value)}
+                  placeholder="feature/my-work"
+                />
+              </Field>
+              <Checkbox
+                checked={worktreeCreateBranch}
+                onChange={(_, data) => setWorktreeCreateBranch(!!data.checked)}
+                label="建立新分支"
+              />
+            </div>
+            <div className="modal-footer">
+              <Button appearance="subtle" onClick={() => void pruneWorktrees()} disabled={!!busy}>
+                清理失效 Worktree
+              </Button>
+              <Button appearance="secondary" onClick={() => setWorktreesOpen(false)} disabled={!!busy}>
+                關閉
+              </Button>
+              <Button
+                appearance="primary"
+                onClick={() => void addWorktree()}
+                disabled={!!busy || !worktreePath.trim() || !worktreeBranch.trim()}
+              >
+                {busy === "worktree" ? <Spinner size="tiny" /> : "新增 Worktree"}
               </Button>
             </div>
           </div>

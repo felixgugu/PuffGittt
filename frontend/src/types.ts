@@ -118,6 +118,18 @@ export interface RebaseTodo {
   subject: string;
 }
 
+export interface Worktree {
+  path: string;
+  head: string;
+  branch: string;
+  bare?: boolean;
+  detached?: boolean;
+  locked?: boolean;
+  lockReason?: string;
+  prunable?: boolean;
+  pruneReason?: string;
+}
+
 export interface CommitDetail {
   commit: Commit;
   files: CommitFile[];

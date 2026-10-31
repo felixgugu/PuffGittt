@@ -121,6 +121,18 @@ type RebaseTodo struct {
 	Subject string `json:"subject"`
 }
 
+type Worktree struct {
+	Path        string `json:"path"`
+	Head        string `json:"head"`
+	Branch      string `json:"branch"`
+	Bare        bool   `json:"bare,omitempty"`
+	Detached    bool   `json:"detached,omitempty"`
+	Locked      bool   `json:"locked,omitempty"`
+	LockReason  string `json:"lockReason,omitempty"`
+	Prunable    bool   `json:"prunable,omitempty"`
+	PruneReason string `json:"pruneReason,omitempty"`
+}
+
 type CommitDetail struct {
 	Commit Commit       `json:"commit"`
 	Files  []CommitFile `json:"files"`

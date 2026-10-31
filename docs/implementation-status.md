@@ -83,6 +83,7 @@ This file tracks the gap between the current PuffGittt build and
 - Right-click remote branch context menu for checkout and remote deletion.
 - Remote management: add, edit URL and remove remotes.
 - Branch comparison dialog with ahead/behind counts, unique commits and changed files.
+- Worktree dialog: list, add, remove and prune.
 - Fetch, pull (merge/rebase/ff-only strategy API) and push with command previews.
 - Force-with-lease push.
 - Ahead/behind status.
@@ -163,7 +164,7 @@ This file tracks the gap between the current PuffGittt build and
   file-history workspace or blame range selection yet.
 - Image diff (before/after, slider, checkerboard): before/after images are shown,
   but there is no slider or overlay comparison.
-- Worktrees, submodules and Git LFS.
+- Worktrees are implemented; submodules and Git LFS are not.
 - Embedded terminal / ConPTY.
 - Credential prompts and SSH host-key verification.
 - Draft persistence and commit/form restoration.

@@ -24,6 +24,7 @@ import type {
   Status,
   Tag,
   UndoRecord,
+  Worktree,
   WorkspaceRepository,
 } from "../types";
 
@@ -148,6 +149,12 @@ export const api = {
       invoke<CommandPreview>("BranchAPI", "Preview", root, request),
     compare: (root: string, base: string, compare: string) =>
       invoke<BranchCompare>("BranchAPI", "Compare", root, base, compare),
+    worktrees: (root: string) => invoke<Worktree[]>("BranchAPI", "Worktrees", root),
+    addWorktree: (root: string, path: string, branch: string, createBranch: boolean) =>
+      invoke<OperationResult>("BranchAPI", "AddWorktree", root, path, branch, createBranch),
+    removeWorktree: (root: string, path: string, force: boolean) =>
+      invoke<OperationResult>("BranchAPI", "RemoveWorktree", root, path, force),
+    pruneWorktrees: (root: string) => invoke<OperationResult>("BranchAPI", "PruneWorktrees", root),
   },
   sync: {
     listRemotes: (root: string) => invoke<Remote[]>("SyncAPI", "ListRemotes", root),
