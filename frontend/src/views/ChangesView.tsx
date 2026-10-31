@@ -42,6 +42,7 @@ export function ChangesView({ tab }: ChangesViewProps) {
   const [subject, setSubject] = useState("");
   const [description, setDescription] = useState("");
   const [amend, setAmend] = useState(false);
+  const [draftLoaded, setDraftLoaded] = useState(false);
   const [filesCollapsed, setFilesCollapsed] = useState(false);
   const [insightsOpen, setInsightsOpen] = useState(false);
   const filesPanelRef = useRef<ImperativePanelHandle>(null);
@@ -51,6 +52,7 @@ export function ChangesView({ tab }: ChangesViewProps) {
     queryFn: () => api.repo.getStatus(root),
   });
   const status = statusQuery.data;
+  const draftKey = `puffgittt:commit-draft:${root}`;
 
   const trackedFiles = useMemo(
     () => (status?.files || []).filter((file) => file.kind !== "untracked"),
@@ -86,6 +88,28 @@ export function ChangesView({ tab }: ChangesViewProps) {
     queryFn: () => api.change.getDiff(root, selected!.path, selectedSide, ""),
     enabled: !!selected,
   });
+
+  useEffect(() => {
+    setDraftLoaded(false);
+    try {
+      const saved = JSON.parse(localStorage.getItem(draftKey) || "null");
+      setSubject(saved?.subject || "");
+      setDescription(saved?.description || "");
+      setAmend(!!saved?.amend);
+    } catch {
+      setSubject("");
+      setDescription("");
+      setAmend(false);
+    }
+    setDraftLoaded(true);
+  }, [draftKey]);
+
+  useEffect(() => {
+    if (!draftLoaded) return;
+    try {
+      localStorage.setItem(draftKey, JSON.stringify({ subject, description, amend }));
+    } catch {}
+  }, [amend, description, draftKey, draftLoaded, subject]);
 
   const invalidate = () => {
     void queryClient.invalidateQueries({ queryKey: ["status", root] });

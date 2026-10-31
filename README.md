@@ -52,6 +52,7 @@ wails build
 - File History and Blame dialog from the Changes diff toolbar, with per-file
   commit history and line-by-line blame.
 - Image diff for common raster formats and SVG, with side-by-side old/new previews.
+- Commit message drafts are persisted per repository in local storage.
 - History: branch filter, commit search, virtualized commit list, SVG lane graph,
   resizable commit details/changed files, tree/flat changed-file modes, commit diff
   dialog, create branch/tag, copy OID, reset, revert, drop commit, cherry-pick
@@ -89,7 +90,7 @@ Highlights:
 - SSH host-key UI and credential prompts.
 - Tags push / remote tag management and signed tags.
 - Terminal/ConPTY, Git Flow, provider integrations and custom actions.
-- Draft persistence, backup retention, diagnostics export, installer, code signing and updater.
+- Backup retention, diagnostics export, installer, code signing and updater.
 
 ## Project layout
 

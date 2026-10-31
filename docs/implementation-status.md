@@ -51,6 +51,7 @@ This file tracks the gap between the current PuffGittt build and
 - Binary detection, image diff for common raster/SVG formats, 2 MiB text cap and
   8 MiB image cap.
 - Commit composer with subject, description, amend and per-commit identity override.
+- Commit message drafts persisted per repository.
 - Commit message passed through stdin to `git commit -F -`.
 - In-process per-repository write lock.
 
@@ -169,7 +170,6 @@ This file tracks the gap between the current PuffGittt build and
   is not exposed. Git LFS is not implemented.
 - Embedded terminal / ConPTY.
 - Credential prompts and SSH host-key verification.
-- Draft persistence and commit/form restoration.
 - Backup retention and restore UI.
 - High-contrast theme.
 - Background task queue with progress events, cancellation and Job Object handling.
