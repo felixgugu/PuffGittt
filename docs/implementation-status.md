@@ -45,6 +45,8 @@ This file tracks the gap between the current PuffGittt build and
 - Discard tracked paths (without backup/undo). Untracked physical deletion is not exposed.
 - Monaco diff with inline/split toggle and a shared maximized file diff dialog.
 - Double-click a file to open the shared diff dialog with previous/next navigation.
+- Repository change monitor polling porcelain status every 1.5 seconds; emits
+  `repo:changed` Wails events and refreshes open tabs automatically.
 - Binary detection and 2 MiB preview cap.
 - Commit composer with subject, description, amend and per-commit identity override.
 - Commit message passed through stdin to `git commit -F -`.
@@ -117,7 +119,8 @@ This file tracks the gap between the current PuffGittt build and
 - **Tags**: local list/create/delete only; no push, remote tag management or signed tags.
 - **Remotes**: list API exists; no remote add/edit/delete UI.
 - **Settings identity**: used for commits via `git -c`, not written to repo config.
-- **Refresh**: manual plus 10-second status polling; no fsnotify watcher.
+- **Refresh**: repository change monitor polls porcelain status every 1.5 seconds;
+  there is no fsnotify watcher or per-directory event stream yet.
 - **Concurrency**: in-process mutex only; no cross-process/global task runner.
 - **Large-file safety**: 2 MiB text cap and binary detection only; no encoding,
   CRLF, filter or special-file fallback UI.

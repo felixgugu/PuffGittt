@@ -56,7 +56,7 @@ recommended implementation order.
 |---|---|---|---|---|
 | Hunk / line staging | Yes | Yes | Yes | P0 |
 | Partial commit | Yes | Yes | Yes | P0 |
-| File watcher | Yes | Yes | No | P0 |
+| File watcher | Yes | Yes | Polling | P0 |
 | Background tasks / cancellation | Yes | Yes | No | P0 |
 | Reflog / Undo | Yes | Partial | Basic | P0 |
 | Interactive rebase | Yes | Yes | No | P1 |
@@ -98,6 +98,9 @@ selection-driven staging directly in the editor.
 - Cover CRLF and no-final-newline edge cases.
 
 ### 2. File watcher and background task queue
+
+Status: repository change monitor implemented (polling). Background task queue,
+progress events and cancellation remain.
 
 - Watch `.git` and the worktree for status/index/ref changes.
 - Debounce filesystem events and refresh the affected repository.

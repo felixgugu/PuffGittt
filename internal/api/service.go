@@ -20,17 +20,26 @@ import (
 )
 
 type Service struct {
-	cfg    *config.Config
-	runner *git.Runner
-	ctx    context.Context
-	mu     sync.RWMutex
-	locks  sync.Map
-	undoMu sync.Mutex
-	undo   map[string]model.UndoRecord
+	cfg      *config.Config
+	runner   *git.Runner
+	ctx      context.Context
+	mu       sync.RWMutex
+	locks    sync.Map
+	undoMu   sync.Mutex
+	undo     map[string]model.UndoRecord
+	watchMu  sync.Mutex
+	watchers map[string]*repoMonitor
+	emitMu   sync.Mutex
+	emit     func(name string, data interface{})
 }
 
 func New(cfg *config.Config) *Service {
-	return &Service{cfg: cfg, runner: git.NewRunner(), undo: map[string]model.UndoRecord{}}
+	return &Service{
+		cfg:      cfg,
+		runner:   git.NewRunner(),
+		undo:     map[string]model.UndoRecord{},
+		watchers: map[string]*repoMonitor{},
+	}
 }
 
 func (s *Service) SetContext(ctx context.Context) { s.ctx = ctx }
@@ -249,6 +258,14 @@ func (a *AppAPI) OpenRepository(path string) (model.Repository, error) {
 	}
 	a.s.cfg.TouchRecent(repo.RootPath, repo.Name)
 	return repo, nil
+}
+
+func (a *AppAPI) WatchRepository(root string) {
+	a.s.WatchRepository(root)
+}
+
+func (a *AppAPI) UnwatchRepository(root string) {
+	a.s.UnwatchRepository(root)
 }
 
 func (a *AppAPI) InitializeRepository(path, initialBranch string) (model.Repository, error) {

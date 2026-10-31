@@ -47,6 +47,8 @@ wails build
   stage/unstage with patch-hash validation, commit composer and a full-height
   Monaco diff; also a shared maximized diff dialog with previous/next file
   navigation.
+- Repository change monitor: polls porcelain status and emits `repo:changed` so
+  open repositories refresh automatically after external edits or Git commands.
 - History: branch filter, commit search, virtualized commit list, SVG lane graph,
   resizable commit details/changed files, tree/flat changed-file modes, commit diff
   dialog, create branch/tag, copy OID, reset, revert and drop commit, all through a

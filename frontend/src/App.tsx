@@ -132,14 +132,38 @@ export default function App() {
     void queryClient.invalidateQueries({ queryKey: ["conflicts", target] });
     void queryClient.invalidateQueries({ queryKey: ["stashes", target] });
     void queryClient.invalidateQueries({ queryKey: ["remotes", target] });
+    void queryClient.invalidateQueries({ queryKey: ["diff", target] });
+    void queryClient.invalidateQueries({ queryKey: ["commit", target] });
     void queryClient.invalidateQueries({ queryKey: ["workspaceRepositories"] });
     void queryClient.invalidateQueries({ queryKey: ["recent"] });
   };
+
+  useEffect(() => {
+    tabs.forEach((tab) => void api.app.watchRepository(tab.repo.rootPath));
+  }, [tabs]);
+
+  useEffect(() => {
+    const runtime = (window as any).runtime;
+    if (!runtime?.EventsOn) return;
+    const off = runtime.EventsOn("repo:changed", (payload: { root?: string }) => {
+      if (payload?.root) invalidateRepo(payload.root);
+    });
+    return () => {
+      if (typeof off === "function") off();
+      else runtime.EventsOff?.("repo:changed");
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const openRepository = async (repo: Repository) => {
     openTab(repo);
     setStatusMessage(t("changes.operationDone"));
     invalidateRepo(repo.rootPath);
+  };
+
+  const handleCloseTab = (id: string) => {
+    void api.app.unwatchRepository(id);
+    closeTab(id);
   };
 
   const openPath = async (path: string) => {
@@ -257,7 +281,7 @@ export default function App() {
             activeId={activeId}
             maximized={maximized}
             onActivate={setActive}
-            onCloseTab={closeTab}
+            onCloseTab={handleCloseTab}
             onOpen={handleOpenFolder}
             onSettings={() => setSettingsOpen(true)}
             onMinimize={() => void api.window.minimize()}

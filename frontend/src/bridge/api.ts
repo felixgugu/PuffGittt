@@ -71,6 +71,8 @@ export const api = {
       invoke<Repository>("AppAPI", "CloneRepository", url, parentPath, name),
     openInExplorer: (path: string) => invoke<void>("AppAPI", "OpenInExplorer", path),
     openExternal: (url: string) => invoke<void>("AppAPI", "OpenExternal", url),
+    watchRepository: (root: string) => invoke<void>("AppAPI", "WatchRepository", root),
+    unwatchRepository: (root: string) => invoke<void>("AppAPI", "UnwatchRepository", root),
   },
   window: {
     minimize: () => invokeMain<void>("MinimizeWindow"),

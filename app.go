@@ -20,9 +20,14 @@ func NewApp(service *api.Service) *App {
 func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
 	a.service.SetContext(ctx)
+	a.service.SetEventEmitter(func(name string, data interface{}) {
+		runtime.EventsEmit(ctx, name, data)
+	})
 }
 
-func (a *App) shutdown(ctx context.Context) {}
+func (a *App) shutdown(ctx context.Context) {
+	a.service.CloseWatchers()
+}
 
 func (a *App) SetTheme(mode string) {
 	if a.ctx == nil {

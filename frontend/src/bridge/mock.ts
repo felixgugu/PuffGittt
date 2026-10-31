@@ -379,6 +379,8 @@ export async function mockInvoke<T>(group: string, method: string, args: any[]):
       return ok("Tag updated") as T;
     case "AppAPI.OpenInExplorer":
     case "AppAPI.OpenExternal":
+    case "AppAPI.WatchRepository":
+    case "AppAPI.UnwatchRepository":
     case "App.SetTheme":
     case "App.MinimizeWindow":
     case "App.ToggleMaximizeWindow":
