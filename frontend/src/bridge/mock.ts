@@ -1,0 +1,314 @@
+import type {
+  Branch,
+  Commit,
+  CommitDetail,
+  ConflictFile,
+  ConflictVersions,
+  DiffDocument,
+  FileChange,
+  OperationResult,
+  RecentRepo,
+  Repository,
+  Settings,
+  StashEntry,
+  Status,
+  Tag,
+} from "../types";
+
+const now = () => new Date().toISOString();
+
+const repo: Repository = {
+  id: "C:\\Demo\\PuffGittt",
+  name: "PuffGittt",
+  rootPath: "C:\\Demo\\PuffGittt",
+  gitDir: "C:\\Demo\\PuffGittt\\.git",
+  headOid: "a1b2c3d4e5f60718293a4b5c6d7e8f9012345678",
+  branch: "main",
+  upstream: "origin/main",
+  detached: false,
+  unborn: false,
+  operation: "normal",
+  revision: Date.now(),
+};
+
+let files: FileChange[] = [
+  {
+    id: "src/auth/login.ts",
+    path: "src/auth/login.ts",
+    indexStatus: "M",
+    worktreeStatus: ".",
+    kind: "tracked",
+  },
+  {
+    id: "src/app.ts",
+    path: "src/app.ts",
+    indexStatus: ".",
+    worktreeStatus: "M",
+    kind: "tracked",
+  },
+  {
+    id: "notes.txt",
+    path: "notes.txt",
+    indexStatus: "?",
+    worktreeStatus: "?",
+    kind: "untracked",
+  },
+];
+
+const commits: Commit[] = [
+  {
+    oid: "a1b2c3d4e5f60718293a4b5c6d7e8f9012345678",
+    parents: ["b2c3d4e5f60718293a4b5c6d7e8f90123456789"],
+    author: "You",
+    authorEmail: "you@example.com",
+    authorTime: now(),
+    committer: "You",
+    committerEmail: "you@example.com",
+    committerTime: now(),
+    subject: "Fix login validation and add settings page",
+    message: "Fix login validation and add settings page\n\n- validate timeout\n- add settings",
+    refs: ["HEAD -> main", "origin/main"],
+  },
+  {
+    oid: "b2c3d4e5f60718293a4b5c6d7e8f90123456789",
+    parents: ["c3d4e5f60718293a4b5c6d7e8f901234567890"],
+    author: "Alice",
+    authorEmail: "alice@example.com",
+    authorTime: now(),
+    committer: "Alice",
+    committerEmail: "alice@example.com",
+    committerTime: now(),
+    subject: "Add settings page",
+    message: "Add settings page",
+    refs: ["develop"],
+  },
+  {
+    oid: "c3d4e5f60718293a4b5c6d7e8f901234567890",
+    parents: ["d4e5f60718293a4b5c6d7e8f90123456789012"],
+    author: "You",
+    authorEmail: "you@example.com",
+    authorTime: now(),
+    committer: "You",
+    committerEmail: "you@example.com",
+    committerTime: now(),
+    subject: "Add input checks",
+    message: "Add input checks",
+    refs: ["feature/login"],
+  },
+  {
+    oid: "d4e5f60718293a4b5c6d7e8f90123456789012",
+    parents: [],
+    author: "Bob",
+    authorEmail: "bob@example.com",
+    authorTime: now(),
+    committer: "Bob",
+    committerEmail: "bob@example.com",
+    committerTime: now(),
+    subject: "Initial commit",
+    message: "Initial commit",
+    refs: [],
+  },
+];
+
+const branches: Branch[] = [
+  {
+    name: "main",
+    fullName: "refs/heads/main",
+    kind: "local",
+    oid: commits[0].oid,
+    upstream: "origin/main",
+    committerDate: now(),
+    current: true,
+    merged: false,
+    ahead: 2,
+    behind: 1,
+  },
+  {
+    name: "develop",
+    fullName: "refs/heads/develop",
+    kind: "local",
+    oid: commits[1].oid,
+    upstream: "origin/develop",
+    committerDate: now(),
+    current: false,
+    merged: false,
+    ahead: 0,
+    behind: 0,
+  },
+  {
+    name: "feature/login",
+    fullName: "refs/heads/feature/login",
+    kind: "local",
+    oid: commits[2].oid,
+    committerDate: now(),
+    current: false,
+    merged: false,
+    ahead: 3,
+    behind: 0,
+  },
+  {
+    name: "origin/main",
+    fullName: "refs/remotes/origin/main",
+    kind: "remote",
+    oid: commits[0].oid,
+    committerDate: now(),
+    current: false,
+    merged: false,
+    ahead: 0,
+    behind: 0,
+  },
+];
+
+const settings: Settings = {
+  theme: "system",
+  language: "zh-TW",
+  fontFamily: "",
+  gitPath: "",
+  authorName: "",
+  authorEmail: "",
+  recent: [{ path: repo.rootPath, name: repo.name, lastOpened: now() }],
+};
+
+function diffFor(path: string, side: string): DiffDocument {
+  const oldText =
+    path === "src/auth/login.ts"
+      ? "export function login(input: string) {\n  return input.length > 8;\n}\n"
+      : path === "src/app.ts"
+        ? "const app = createApp();\napp.mount('#root');\n"
+        : "";
+  const newText =
+    path === "src/auth/login.ts"
+      ? "export function login(input: string) {\n  if (!input.includes('@')) {\n    throw new Error('Invalid email');\n  }\n  return input.length > 8;\n}\n"
+      : path === "src/app.ts"
+        ? "const app = createApp();\napp.use(router);\napp.mount('#root');\n"
+        : "A new note from the working tree.\n";
+  return {
+    path,
+    side,
+    oldText,
+    newText,
+    language: path.endsWith(".ts") ? "typescript" : "plaintext",
+    binary: false,
+    truncated: false,
+  };
+}
+
+function ok(message: string): OperationResult {
+  return { success: true, message };
+}
+
+export async function mockInvoke<T>(group: string, method: string, args: any[]): Promise<T> {
+  await new Promise((resolve) => setTimeout(resolve, 80));
+  const key = `${group}.${method}`;
+  switch (key) {
+    case "AppAPI.GetEnvironment":
+      return {
+        gitFound: true,
+        gitVersion: "git version 2.52.0.windows.1",
+        goVersion: "go1.27.0",
+        wails: "v2.17.0",
+      } as T;
+    case "AppAPI.GetSettings":
+      return structuredClone(settings) as T;
+    case "AppAPI.SaveSettings":
+      Object.assign(settings, args[0]);
+      return structuredClone(settings) as T;
+    case "AppAPI.ListRecent":
+      return settings.recent as T;
+    case "AppAPI.PickFolder":
+      return repo.rootPath as T;
+    case "AppAPI.OpenRepository":
+      return repo as T;
+    case "AppAPI.InitializeRepository":
+      return repo as T;
+    case "AppAPI.CloneRepository":
+      return repo as T;
+    case "AppAPI.RemoveRecent":
+      return undefined as T;
+    case "RepoAPI.GetStatus":
+      return { repo, files: files.map((f) => ({ ...f })), ahead: 2, behind: 1 } as Status as T;
+    case "RepoAPI.GetBranches":
+    case "BranchAPI.List":
+      return branches.map((b) => ({ ...b })) as T;
+    case "RepoAPI.GetRemotes":
+    case "SyncAPI.ListRemotes":
+      return [{ name: "origin", fetchUrl: "https://github.com/example/puffgittt.git", pushUrl: "https://github.com/example/puffgittt.git" }] as T;
+    case "ChangeAPI.GetDiff":
+      return diffFor(args[1], args[2]) as T;
+    case "ChangeAPI.Stage":
+      files = files.map((f) =>
+        (args[1] as string[]).includes(f.path) ? { ...f, indexStatus: "M", worktreeStatus: "." } : f,
+      );
+      return ok("Staged") as T;
+    case "ChangeAPI.Unstage":
+      files = files.map((f) =>
+        (args[1] as string[]).includes(f.path) ? { ...f, indexStatus: ".", worktreeStatus: "M" } : f,
+      );
+      return ok("Unstaged") as T;
+    case "ChangeAPI.Discard":
+      files = files.filter((f) => !(args[1] as string[]).includes(f.path));
+      return ok("Discarded") as T;
+    case "CommitAPI.Commit":
+      files = files.filter((f) => f.indexStatus === ".");
+      return ok("Committed") as T;
+    case "HistoryAPI.List":
+      return commits.filter((c) => c.subject.toLowerCase().includes(String(args[4] || "").toLowerCase())) as T;
+    case "HistoryAPI.GetCommit": {
+      const commit = commits.find((c) => c.oid === args[1]) || commits[0];
+      return { commit, files: [{ path: "src/auth/login.ts", status: "M" }] } as CommitDetail as T;
+    }
+    case "BranchAPI.Create":
+      return ok("Branch created") as T;
+    case "BranchAPI.Switch":
+      return ok("Switched") as T;
+    case "BranchAPI.Delete":
+      return ok("Branch deleted") as T;
+    case "BranchAPI.Merge":
+      return ok("Merged") as T;
+    case "BranchAPI.Rebase":
+      return ok("Rebased") as T;
+    case "SyncAPI.Fetch":
+    case "SyncAPI.Pull":
+    case "SyncAPI.Push":
+      return ok("Synchronized") as T;
+    case "ConflictAPI.List":
+      return [] as ConflictFile[] as T;
+    case "ConflictAPI.GetVersions":
+      return {
+        path: args[1],
+        base: "",
+        ours: "",
+        theirs: "",
+        result: "",
+        oursLabel: "Ours",
+        theirsLabel: "Theirs",
+        binary: false,
+        operation: "normal",
+      } as ConflictVersions as T;
+    case "ConflictAPI.SaveResult":
+      return undefined as T;
+    case "ConflictAPI.Resolve":
+    case "ConflictAPI.Continue":
+    case "ConflictAPI.Abort":
+      return ok("Resolved") as T;
+    case "StashAPI.List":
+      return [] as StashEntry[] as T;
+    case "StashAPI.Create":
+    case "StashAPI.Apply":
+    case "StashAPI.Drop":
+      return ok("Stash updated") as T;
+    case "TagAPI.List":
+      return [] as Tag[] as T;
+    case "TagAPI.Create":
+    case "TagAPI.Delete":
+      return ok("Tag updated") as T;
+    case "AppAPI.OpenInExplorer":
+    case "AppAPI.OpenExternal":
+    case "App.SetTheme":
+      return undefined as T;
+    default:
+      throw new Error(`No mock for ${key}`);
+  }
+}
+
+export const isMock = true;
