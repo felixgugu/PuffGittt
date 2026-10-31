@@ -87,6 +87,8 @@ export function HistoryView({ tab }: HistoryViewProps) {
   const [newTagMessage, setNewTagMessage] = useState("");
   const [tagBusy, setTagBusy] = useState(false);
   const [resetDialogOpen, setResetDialogOpen] = useState(false);
+  const [cherryDialogOpen, setCherryDialogOpen] = useState(false);
+  const [cherryMainline, setCherryMainline] = useState("1");
   const [resetMode, setResetMode] = useState<"soft" | "mixed" | "hard">("mixed");
   const [actionBusy, setActionBusy] = useState(false);
   const [pendingAction, setPendingAction] = useState<PendingCommitAction | null>(null);
@@ -338,7 +340,7 @@ export function HistoryView({ tab }: HistoryViewProps) {
     ? `git reset --hard ${undoInfo.data.beforeOid}`
     : "git reset --hard <previous-head>";
 
-  const prepareCommitAction = async (action: "revert" | "drop", meta: Omit<PendingCommitAction, "preview" | "execute">) => {
+  const prepareCommitAction = async (action: "revert" | "drop" | "cherry-pick", meta: Omit<PendingCommitAction, "preview" | "execute">) => {
     if (!actionCommit) return;
     const oid = actionCommit.oid;
     setActionBusy(true);
@@ -347,13 +349,24 @@ export function HistoryView({ tab }: HistoryViewProps) {
       setPendingAction({
         ...meta,
         preview,
-        execute: () => (action === "revert" ? api.history.revert(root, oid) : api.history.drop(root, oid)),
+        execute: () =>
+          action === "revert"
+            ? api.history.revert(root, oid)
+            : action === "drop"
+              ? api.history.drop(root, oid)
+              : api.history.cherryPick(root, oid, ""),
       });
     } catch (error: any) {
       setStatusMessage(error?.message || String(error));
     } finally {
       setActionBusy(false);
     }
+  };
+
+  const handleCherryPick = async () => {
+    if (!actionCommit) return;
+    const ok = await runCommitAction(() => api.history.cherryPick(root, actionCommit.oid, cherryMainline));
+    if (ok) setCherryDialogOpen(false);
   };
 
   const confirmPendingAction = async () => {
@@ -799,6 +812,50 @@ export function HistoryView({ tab }: HistoryViewProps) {
         </div>
       ) : null}
 
+      {cherryDialogOpen && actionCommit ? (
+        <div
+          className="modal-backdrop"
+          onMouseDown={(event) => event.target === event.currentTarget && !actionBusy && setCherryDialogOpen(false)}
+        >
+          <div className="modal small" role="dialog" aria-modal="true" aria-label="Cherry-pick Merge Commit">
+            <div className="modal-header">
+              <h2>Cherry-pick Merge Commit</h2>
+              <Button
+                appearance="subtle"
+                icon={<Dismiss24Regular />}
+                onClick={() => setCherryDialogOpen(false)}
+                disabled={actionBusy}
+              />
+            </div>
+            <div className="modal-body form-stack">
+              <div className="branch-source">
+                <strong>{actionCommit.subject}</strong>
+                <span>{shortOid(actionCommit.oid)}</span>
+              </div>
+              <Field label="Mainline parent">
+                <UnderlineSelect value={cherryMainline} onChange={(_, data) => setCherryMainline(data.value)}>
+                  {actionCommit.parents.map((parent, index) => (
+                    <option key={parent} value={String(index + 1)}>
+                      {index + 1} · {shortOid(parent)}
+                    </option>
+                  ))}
+                </UnderlineSelect>
+              </Field>
+              <pre className="git-command-preview"><code>{`git cherry-pick -m ${cherryMainline} ${actionCommit.oid}`}</code></pre>
+              <p className="git-command-warning">Merge Commit 需要指定以哪一個 parent 作為 mainline。</p>
+            </div>
+            <div className="modal-footer">
+              <Button appearance="secondary" onClick={() => setCherryDialogOpen(false)} disabled={actionBusy}>
+                取消
+              </Button>
+              <Button appearance="primary" onClick={() => void handleCherryPick()} disabled={actionBusy}>
+                {actionBusy ? <Spinner size="tiny" /> : "確認 Cherry-pick"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
       {undoDialogOpen && undoInfo.data?.beforeOid ? (
         <GitCommandDialog
           title="復原上一次操作"
@@ -910,6 +967,23 @@ export function HistoryView({ tab }: HistoryViewProps) {
               },
             },
             { divider: true },
+            {
+              key: "cherry-pick",
+              label: "Cherry-pick 此 Commit…",
+              disabled: actionBusy,
+              onSelect: () => {
+                if (contextCommit.parents.length > 1) {
+                  setCherryMainline("1");
+                  setCherryDialogOpen(true);
+                  return;
+                }
+                void prepareCommitAction("cherry-pick", {
+                  title: `Cherry-pick ${shortOid(contextCommit.oid)}`,
+                  description: "把此 Commit 套用到目前分支，建立一個新的 Commit。",
+                  warning: "Cherry-pick 可能產生衝突，衝突後需到 Conflicts 頁面處理。",
+                });
+              },
+            },
             {
               key: "reset",
               label: "Reset 目前分支到此 Commit…",

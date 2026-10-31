@@ -398,6 +398,18 @@ func (a *HistoryAPI) Drop(root, oid string) (model.OperationResult, error) {
 	return result, err
 }
 
+func (a *HistoryAPI) CherryPick(root, oid, mainline string) (model.OperationResult, error) {
+	mu := a.s.repoLock(root)
+	mu.Lock()
+	defer mu.Unlock()
+	before := a.s.headOid(root)
+	result, err := a.s.runnerWithSettings().CherryPickCommit(a.s.context(), root, oid, mainline)
+	if err == nil {
+		a.s.recordUndo(root, "Cherry-pick", before)
+	}
+	return result, err
+}
+
 func (a *HistoryAPI) Reflog(root string, limit int) ([]model.ReflogEntry, error) {
 	return a.s.runnerWithSettings().Reflog(a.s.context(), root, limit)
 }

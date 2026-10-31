@@ -51,8 +51,9 @@ wails build
   open repositories refresh automatically after external edits or Git commands.
 - History: branch filter, commit search, virtualized commit list, SVG lane graph,
   resizable commit details/changed files, tree/flat changed-file modes, commit diff
-  dialog, create branch/tag, copy OID, reset, revert and drop commit, all through a
-  right-click context menu with Git command previews.
+  dialog, create branch/tag, copy OID, reset, revert, drop commit and cherry-pick
+  (including merge mainline selection), all through a right-click context menu
+  with Git command previews.
 - Branches: local and remote lists, create, switch, merge, rebase and delete through
   a right-click context menu, with merge/rebase direction labels and Git command
   confirmation dialogs.
@@ -77,7 +78,7 @@ Highlights:
 
 - Filesystem watcher; current refresh is manual or 10-second status polling.
 - Background task queue, progress events, cancellation and operation locks beyond the in-process mutex.
-- Interactive rebase, cherry-pick, blame, file history, image diff, worktrees, submodules and LFS.
+- Interactive rebase, blame, file history, image diff, worktrees, submodules and LFS.
 - Remote configuration UI, force-with-lease push flow, SSH host-key UI and credential prompts.
 - Branch rename, set upstream, publish branch, checkout remote branch and branch compare.
 - Tags push / remote tag management and signed tags.

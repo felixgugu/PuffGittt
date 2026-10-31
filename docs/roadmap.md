@@ -60,7 +60,7 @@ recommended implementation order.
 | Background tasks / cancellation | Yes | Yes | No | P0 |
 | Reflog / Undo | Yes | Partial | Basic | P0 |
 | Interactive rebase | Yes | Yes | No | P1 |
-| Cherry-pick | Yes | Yes | No | P1 |
+| Cherry-pick | Yes | Yes | Yes | P1 |
 | File history | Yes | Yes | No | P1 |
 | Blame | Yes | Yes | No | P1 |
 | Branch compare | Yes | Yes | No | P1 |

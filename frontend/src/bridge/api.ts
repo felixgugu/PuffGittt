@@ -110,6 +110,8 @@ export const api = {
       invoke<OperationResult>("HistoryAPI", "Revert", root, oid),
     drop: (root: string, oid: string) =>
       invoke<OperationResult>("HistoryAPI", "Drop", root, oid),
+    cherryPick: (root: string, oid: string, mainline: string) =>
+      invoke<OperationResult>("HistoryAPI", "CherryPick", root, oid, mainline),
     reflog: (root: string, limit: number) =>
       invoke<ReflogEntry[]>("HistoryAPI", "Reflog", root, limit),
     undoInfo: (root: string) => invoke<UndoRecord>("HistoryAPI", "UndoInfo", root),

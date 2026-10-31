@@ -3,6 +3,7 @@ package git
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/felixgugu/puffgittt/internal/model"
@@ -56,6 +57,28 @@ func RevertArgs(ctx context.Context, r *Runner, root, oid string) ([]string, err
 	return []string{"revert", "--no-edit", oid}, nil
 }
 
+func CherryPickArgs(ctx context.Context, r *Runner, root, oid, mainline string) ([]string, error) {
+	if err := r.verifyRevision(ctx, root, oid); err != nil {
+		return nil, err
+	}
+	parents, err := commitParents(ctx, r, root, oid)
+	if err != nil {
+		return nil, err
+	}
+	mainline = strings.TrimSpace(mainline)
+	if len(parents) > 1 {
+		if mainline == "" {
+			mainline = "1"
+		}
+		index, err := strconv.Atoi(mainline)
+		if err != nil || index < 1 || index > len(parents) {
+			return nil, fmt.Errorf("mainline must be between 1 and %d", len(parents))
+		}
+		return []string{"cherry-pick", "-m", strconv.Itoa(index), oid}, nil
+	}
+	return []string{"cherry-pick", oid}, nil
+}
+
 func DropArgs(ctx context.Context, r *Runner, root, oid string) ([]string, error) {
 	if err := r.verifyRevision(ctx, root, oid); err != nil {
 		return nil, err
@@ -100,6 +123,8 @@ func (r *Runner) PreviewHistoryCommand(ctx context.Context, root string, req mod
 	case "drop":
 		args, err = DropArgs(ctx, r, repo.RootPath, req.Target)
 		destructive = true
+	case "cherry-pick":
+		args, err = CherryPickArgs(ctx, r, repo.RootPath, req.Target, req.Strategy)
 	default:
 		return model.CommandPreview{}, fmt.Errorf("unsupported history preview action %q", req.Action)
 	}
@@ -155,4 +180,20 @@ func (r *Runner) DropCommit(ctx context.Context, root, oid string) (model.Operat
 		return model.OperationResult{Success: false, Message: "Drop requires attention", Output: strings.TrimSpace(out + "\n" + errOut)}, r.OutputError(out, errOut, err)
 	}
 	return model.OperationResult{Success: true, Message: "Commit dropped", Output: strings.TrimSpace(out)}, nil
+}
+
+func (r *Runner) CherryPickCommit(ctx context.Context, root, oid, mainline string) (model.OperationResult, error) {
+	repo, err := r.Open(ctx, root)
+	if err != nil {
+		return model.OperationResult{}, err
+	}
+	args, err := CherryPickArgs(ctx, r, repo.RootPath, oid, mainline)
+	if err != nil {
+		return model.OperationResult{}, err
+	}
+	out, errOut, err := r.RunBytes(ctx, repo.RootPath, nil, args...)
+	if err != nil {
+		return model.OperationResult{Success: false, Message: "Cherry-pick requires attention", Output: strings.TrimSpace(out + "\n" + errOut)}, r.OutputError(out, errOut, err)
+	}
+	return model.OperationResult{Success: true, Message: "Cherry-picked", Output: strings.TrimSpace(out)}, nil
 }

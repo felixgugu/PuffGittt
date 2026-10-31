@@ -282,6 +282,7 @@ export async function mockInvoke<T>(group: string, method: string, args: any[]):
         reset: `git reset --${request.strategy || "mixed"} ${target}`,
         revert: `git revert --no-edit ${target}`,
         drop: target === repo.headOid ? "git reset --hard HEAD^" : `git rebase --onto ${target}^ ${target}`,
+        "cherry-pick": request.strategy ? `git cherry-pick -m ${request.strategy} ${target}` : `git cherry-pick ${target}`,
       };
       return {
         command: commands[request.action] || "git",
@@ -294,6 +295,8 @@ export async function mockInvoke<T>(group: string, method: string, args: any[]):
       return ok("Reverted") as T;
     case "HistoryAPI.Drop":
       return ok("Commit dropped") as T;
+    case "HistoryAPI.CherryPick":
+      return ok("Cherry-picked") as T;
     case "HistoryAPI.Reflog":
       return commits.slice(0, 6).map((commit, index) => ({
         selector: `HEAD@{${index}}`,

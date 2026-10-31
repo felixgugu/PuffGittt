@@ -29,6 +29,45 @@ func commitTestFile(t *testing.T, runner *Runner, dir, name, message string) str
 	return strings.TrimSpace(out)
 }
 
+func TestCherryPickCommit(t *testing.T) {
+	runner, dir := setupRepo(t)
+	ctx := context.Background()
+
+	if _, err := runner.Run(ctx, dir, "checkout", "-b", "feature"); err != nil {
+		t.Fatal(err)
+	}
+	oid := commitTestFile(t, runner, dir, "feature.txt", "feature work")
+	if _, err := runner.Run(ctx, dir, "checkout", "main"); err != nil {
+		t.Fatal(err)
+	}
+
+	preview, err := runner.PreviewHistoryCommand(ctx, dir, model.CommandRequest{Action: "cherry-pick", Target: oid})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(preview.Command, "git cherry-pick "+oid) {
+		t.Fatalf("preview = %q", preview.Command)
+	}
+
+	result, err := runner.CherryPickCommit(ctx, dir, oid, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !result.Success {
+		t.Fatalf("result = %#v", result)
+	}
+	if _, err := os.Stat(filepath.Join(dir, "feature.txt")); err != nil {
+		t.Fatalf("cherry-picked file missing: %v", err)
+	}
+	subject, err := runner.Run(ctx, dir, "log", "-1", "--format=%s")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.TrimSpace(subject) != "feature work" {
+		t.Fatalf("subject = %q", subject)
+	}
+}
+
 func TestPreviewHistoryCommands(t *testing.T) {
 	runner, dir := setupRepo(t)
 	ctx := context.Background()
