@@ -3,6 +3,7 @@ import { Button, Field, Spinner } from "@fluentui/react-components";
 import {
   Add24Regular,
   ArrowClockwise24Regular,
+  ArrowUpload24Regular,
   Delete24Regular,
   Dismiss24Regular,
   Tag24Regular,
@@ -29,8 +30,12 @@ export function TagsView({ tab }: TagsViewProps) {
   const [target, setTarget] = useState("HEAD");
   const [message, setMessage] = useState("");
   const [pendingDelete, setPendingDelete] = useState<Tag | null>(null);
+  const [pendingPush, setPendingPush] = useState<Tag | null>(null);
+  const [pushAllOpen, setPushAllOpen] = useState(false);
 
   const tags = useQuery({ queryKey: ["tags", root], queryFn: () => api.tags.list(root) });
+  const remotes = useQuery({ queryKey: ["remotes", root], queryFn: () => api.sync.listRemotes(root) });
+  const remoteName = remotes.data?.[0]?.name || "";
 
   const invalidate = () => {
     void queryClient.invalidateQueries({ queryKey: ["tags", root] });
@@ -79,6 +84,34 @@ export function TagsView({ tab }: TagsViewProps) {
     }
   };
 
+  const handlePush = async () => {
+    if (!pendingPush || !remoteName) return;
+    setBusy("push");
+    try {
+      const result = await api.tags.push(root, remoteName, pendingPush.name);
+      setStatusMessage(result.message);
+      setPendingPush(null);
+    } catch (error: any) {
+      setStatusMessage(error?.message || String(error));
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const handlePushAll = async () => {
+    if (!remoteName) return;
+    setBusy("push");
+    try {
+      const result = await api.tags.pushAll(root, remoteName);
+      setStatusMessage(result.message);
+      setPushAllOpen(false);
+    } catch (error: any) {
+      setStatusMessage(error?.message || String(error));
+    } finally {
+      setBusy(null);
+    }
+  };
+
   return (
     <div className="tags-view">
       <div className="panel-card tags-card">
@@ -93,6 +126,14 @@ export function TagsView({ tab }: TagsViewProps) {
               title="重新整理"
               onClick={invalidate}
               disabled={tags.isFetching || !!busy}
+            />
+            <Button
+              size="small"
+              appearance="subtle"
+              icon={<ArrowUpload24Regular />}
+              title={remoteName ? `Push 所有 Tags 到 ${remoteName}` : "尚未設定 Remote"}
+              onClick={() => setPushAllOpen(true)}
+              disabled={!remoteName || !!busy}
             />
             <Button size="small" appearance="primary" icon={<Add24Regular />} onClick={() => setCreateOpen(true)}>
               New Tag
@@ -110,6 +151,14 @@ export function TagsView({ tab }: TagsViewProps) {
             </div>
             <span className="tag-oid">{shortOid(tag.oid)}</span>
             <div className="tag-actions">
+              <Button
+                size="small"
+                appearance="subtle"
+                icon={<ArrowUpload24Regular />}
+                title={remoteName ? `Push 到 ${remoteName}` : "尚未設定 Remote"}
+                disabled={!remoteName || !!busy}
+                onClick={() => setPendingPush(tag)}
+              />
               <Button
                 size="small"
                 appearance="subtle"
@@ -167,6 +216,29 @@ export function TagsView({ tab }: TagsViewProps) {
           busy={busy === "delete"}
           onCancel={() => setPendingDelete(null)}
           onConfirm={() => void handleDelete()}
+        />
+      ) : null}
+
+      {pendingPush ? (
+        <GitCommandDialog
+          title={`Push Tag ${pendingPush.name}`}
+          description={`將 Tag ${pendingPush.name} 推送到 ${remoteName}。`}
+          command={`git push ${remoteName} refs/tags/${pendingPush.name}`}
+          busy={busy === "push"}
+          onCancel={() => setPendingPush(null)}
+          onConfirm={() => void handlePush()}
+        />
+      ) : null}
+
+      {pushAllOpen ? (
+        <GitCommandDialog
+          title="Push 所有 Tags"
+          description={`將所有本機 Tags 推送到 ${remoteName}。`}
+          command={`git push ${remoteName} --tags`}
+          warning="會更新遠端同名 Tags。"
+          busy={busy === "push"}
+          onCancel={() => setPushAllOpen(false)}
+          onConfirm={() => void handlePushAll()}
         />
       ) : null}
     </div>

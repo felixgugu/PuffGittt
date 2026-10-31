@@ -187,5 +187,8 @@ export const api = {
     create: (root: string, name: string, oid: string, message: string) =>
       invoke<OperationResult>("TagAPI", "Create", root, name, oid, message),
     delete: (root: string, name: string) => invoke<OperationResult>("TagAPI", "Delete", root, name),
+    push: (root: string, remote: string, name: string) =>
+      invoke<OperationResult>("TagAPI", "Push", root, remote, name),
+    pushAll: (root: string, remote: string) => invoke<OperationResult>("TagAPI", "PushAll", root, remote),
   },
 };

@@ -653,3 +653,17 @@ func (a *TagAPI) Delete(root, name string) (model.OperationResult, error) {
 	defer mu.Unlock()
 	return a.s.runnerWithSettings().DeleteTag(a.s.context(), root, name)
 }
+
+func (a *TagAPI) Push(root, remote, name string) (model.OperationResult, error) {
+	mu := a.s.repoLock(root)
+	mu.Lock()
+	defer mu.Unlock()
+	return a.s.runnerWithSettings().PushTag(a.s.context(), root, remote, name)
+}
+
+func (a *TagAPI) PushAll(root, remote string) (model.OperationResult, error) {
+	mu := a.s.repoLock(root)
+	mu.Lock()
+	defer mu.Unlock()
+	return a.s.runnerWithSettings().PushAllTags(a.s.context(), root, remote)
+}

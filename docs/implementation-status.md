@@ -98,6 +98,7 @@ This file tracks the gap between the current PuffGittt build and
 - Create lightweight tags.
 - Create annotated tags with optional commit target.
 - Delete local tags with Git command confirmation.
+- Push a single tag or all tags to the first configured remote.
 - Create tags directly from a History commit.
 
 ### Backend API
@@ -125,7 +126,8 @@ This file tracks the gap between the current PuffGittt build and
 - **Commit graph**: functional lane algorithm but not the full frontier/cross-page
   snapshot implementation described in the spec.
 - **Search**: commit subject search only; author/SHA/path search not complete.
-- **Tags**: local list/create/delete only; no push, remote tag management or signed tags.
+- **Tags**: local list/create/delete, single-tag push and push-all. No remote tag
+  deletion, remote tag listing or signed tags yet.
 - **Remotes**: remote add/edit/delete UI exists; credential prompts and SSH host-key
   verification are still missing.
 - **Settings identity**: used for commits via `git -c`, not written to repo config.

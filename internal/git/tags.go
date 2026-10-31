@@ -2,6 +2,7 @@ package git
 
 import (
 	"context"
+	"fmt"
 	"strings"
 
 	"github.com/felixgugu/puffgittt/internal/model"
@@ -56,6 +57,36 @@ func (r *Runner) CreateTag(ctx context.Context, root, name, oid, message string)
 		return model.OperationResult{}, r.OutputError(out, errOut, err)
 	}
 	return model.OperationResult{Success: true, Message: "Tag created", Output: strings.TrimSpace(out)}, nil
+}
+
+func (r *Runner) PushTag(ctx context.Context, root, remote, name string) (model.OperationResult, error) {
+	repo, err := r.Open(ctx, root)
+	if err != nil {
+		return model.OperationResult{}, err
+	}
+	if strings.TrimSpace(remote) == "" || strings.TrimSpace(name) == "" {
+		return model.OperationResult{}, fmt.Errorf("remote and tag name are required")
+	}
+	out, errOut, err := r.RunBytes(ctx, repo.RootPath, nil, "push", remote, "refs/tags/"+name)
+	if err != nil {
+		return model.OperationResult{Success: false, Message: "Tag push failed", Output: strings.TrimSpace(out + "\n" + errOut)}, r.OutputError(out, errOut, err)
+	}
+	return model.OperationResult{Success: true, Message: "Tag pushed", Output: strings.TrimSpace(out + "\n" + errOut)}, nil
+}
+
+func (r *Runner) PushAllTags(ctx context.Context, root, remote string) (model.OperationResult, error) {
+	repo, err := r.Open(ctx, root)
+	if err != nil {
+		return model.OperationResult{}, err
+	}
+	if strings.TrimSpace(remote) == "" {
+		return model.OperationResult{}, fmt.Errorf("remote is required")
+	}
+	out, errOut, err := r.RunBytes(ctx, repo.RootPath, nil, "push", remote, "--tags")
+	if err != nil {
+		return model.OperationResult{Success: false, Message: "Tag push failed", Output: strings.TrimSpace(out + "\n" + errOut)}, r.OutputError(out, errOut, err)
+	}
+	return model.OperationResult{Success: true, Message: "Tags pushed", Output: strings.TrimSpace(out + "\n" + errOut)}, nil
 }
 
 func (r *Runner) DeleteTag(ctx context.Context, root, name string) (model.OperationResult, error) {

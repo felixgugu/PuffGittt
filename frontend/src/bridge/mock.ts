@@ -434,6 +434,9 @@ export async function mockInvoke<T>(group: string, method: string, args: any[]):
     case "TagAPI.Create":
     case "TagAPI.Delete":
       return ok("Tag updated") as T;
+    case "TagAPI.Push":
+    case "TagAPI.PushAll":
+      return ok("Tag pushed") as T;
     case "AppAPI.OpenInExplorer":
     case "AppAPI.OpenExternal":
     case "AppAPI.WatchRepository":
