@@ -81,7 +81,9 @@ wails build
 ## Not implemented yet
 
 See [docs/implementation-status.md](docs/implementation-status.md) for the detailed gap list,
-and [docs/roadmap.md](docs/roadmap.md) for the SmartGit / SourceTree benchmark and priorities.
+[docs/roadmap.md](docs/roadmap.md) for the SmartGit / SourceTree benchmark and priorities,
+and [docs/feature-report-2026-11-01.md](docs/feature-report-2026-11-01.md) for the
+current feature inventory and recommendations.
 
 Highlights:
 

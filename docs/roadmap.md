@@ -67,7 +67,8 @@ recommended implementation order.
 | Remote management UI | Yes | Yes | Yes | P1 |
 | Force-with-lease push | Yes | Yes | Yes | P1 |
 | Credential / SSH UI | Yes | Yes | No | P1 |
-| Hunk-level conflict resolution | Yes | Yes | Partial | P1 || Submodules | Yes | Yes | Basic | P2 |
+| Hunk-level conflict resolution | Yes | Yes | Partial | P1 |
+| Submodules | Yes | Yes | Basic | P2 |
 | Worktrees | Yes | Yes | Yes | P2 |
 | Git LFS | Yes | Yes | No | P2 |
 | Git Flow | Partial | Strong | No | P2 |
