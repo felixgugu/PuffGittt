@@ -1,6 +1,7 @@
 import type {
   Branch,
   BranchCompare,
+  BisectState,
   BlameLine,
   CommandPreview,
   CommandRequest,
@@ -333,6 +334,12 @@ export async function mockInvoke<T>(group: string, method: string, args: any[]):
       })) as RebaseTodo[] as T;
     case "HistoryAPI.InteractiveRebase":
       return ok("Interactive rebase complete") as T;
+    case "HistoryAPI.BisectState":
+      return { active: false, current: repo.headOid } as BisectState as T;
+    case "HistoryAPI.BisectStart":
+    case "HistoryAPI.BisectMark":
+    case "HistoryAPI.BisectReset":
+      return ok("Bisect updated") as T;
     case "HistoryAPI.Reflog":
       return commits.slice(0, 6).map((commit, index) => ({
         selector: `HEAD@{${index}}`,

@@ -6,6 +6,7 @@ import {
 } from "@fluentui/react-components";
 import {
   ArrowUndo24Regular,
+  Bug24Regular,
   ChevronDown24Regular,
   ChevronRight24Regular,
   Dismiss24Regular,
@@ -92,6 +93,9 @@ export function HistoryView({ tab }: HistoryViewProps) {
   const [cherryMainline, setCherryMainline] = useState("1");
   const [rebaseBase, setRebaseBase] = useState<string | null>(null);
   const [rebaseTodos, setRebaseTodos] = useState<RebaseTodo[]>([]);
+  const [bisectOpen, setBisectOpen] = useState(false);
+  const [bisectBad, setBisectBad] = useState("HEAD");
+  const [bisectGood, setBisectGood] = useState("");
   const [resetMode, setResetMode] = useState<"soft" | "mixed" | "hard">("mixed");
   const [actionBusy, setActionBusy] = useState(false);
   const [pendingAction, setPendingAction] = useState<PendingCommitAction | null>(null);
@@ -152,6 +156,11 @@ export function HistoryView({ tab }: HistoryViewProps) {
   const undoInfo = useQuery({
     queryKey: ["undo", root],
     queryFn: () => api.history.undoInfo(root),
+  });
+  const bisect = useQuery({
+    queryKey: ["bisect", root],
+    queryFn: () => api.history.bisectState(root),
+    enabled: bisectOpen,
   });
   const actionCommit = contextCommit ?? detail.data?.commit;
 
@@ -311,6 +320,9 @@ export function HistoryView({ tab }: HistoryViewProps) {
     void queryClient.invalidateQueries({ queryKey: ["conflicts", root] });
     void queryClient.invalidateQueries({ queryKey: ["reflog", root] });
     void queryClient.invalidateQueries({ queryKey: ["undo", root] });
+    void queryClient.invalidateQueries({ queryKey: ["bisect", root] });
+    void queryClient.invalidateQueries({ queryKey: ["diff", root] });
+    void queryClient.invalidateQueries({ queryKey: ["commit", root] });
   };
 
   const runCommitAction = async (action: () => Promise<OperationResult>) => {
@@ -401,6 +413,25 @@ export function HistoryView({ tab }: HistoryViewProps) {
       setRebaseBase(null);
       setRebaseTodos([]);
     }
+  };
+
+  const runBisect = async (action: () => Promise<OperationResult>) => {
+    setActionBusy(true);
+    try {
+      const result = await action();
+      setStatusMessage(result.output || result.message);
+      invalidateCommitActions();
+      await bisect.refetch();
+    } catch (error: any) {
+      setStatusMessage(error?.message || String(error));
+    } finally {
+      setActionBusy(false);
+    }
+  };
+
+  const startBisect = () => {
+    if (!bisectGood.trim()) return;
+    void runBisect(() => api.history.bisectStart(root, bisectBad.trim() || "HEAD", bisectGood.trim()));
   };
 
   const confirmPendingAction = async () => {
@@ -524,6 +555,14 @@ export function HistoryView({ tab }: HistoryViewProps) {
                     </UnderlineSelect>
                   </>
                 ) : null}
+                <Button
+                  size="small"
+                  appearance="subtle"
+                  icon={<Bug24Regular />}
+                  title="Bisect"
+                  onClick={() => setBisectOpen(true)}
+                  disabled={actionBusy}
+                />
                 {undoInfo.data?.operation ? (
                   <Button
                     size="small"
@@ -885,6 +924,81 @@ export function HistoryView({ tab }: HistoryViewProps) {
               <Button appearance="primary" onClick={() => void handleCherryPick()} disabled={actionBusy}>
                 {actionBusy ? <Spinner size="tiny" /> : "確認 Cherry-pick"}
               </Button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {bisectOpen ? (
+        <div
+          className="modal-backdrop"
+          onMouseDown={(event) => event.target === event.currentTarget && !actionBusy && setBisectOpen(false)}
+        >
+          <div className="modal small" role="dialog" aria-modal="true" aria-label="Bisect">
+            <div className="modal-header">
+              <h2>Bisect</h2>
+              <Button appearance="subtle" icon={<Dismiss24Regular />} onClick={() => setBisectOpen(false)} disabled={actionBusy} />
+            </div>
+            <div className="modal-body form-stack">
+              {bisect.isLoading ? (
+                <div className="center-state"><Spinner label={t("common.loading")} /></div>
+              ) : bisect.data?.active ? (
+                <>
+                  <div className="branch-source">
+                    <strong>目前檢查的 Commit</strong>
+                    <span>{shortOid(bisect.data.current)}</span>
+                  </div>
+                  <pre className="git-command-preview"><code>{bisect.data.log || "git bisect"}</code></pre>
+                  <p className="git-command-warning">
+                    測試目前工作區後，標記此 Commit 是 good 或 bad。Bisect 完成後請按 Reset 回到原分支。
+                  </p>
+                  <div className="conflict-actions">
+                    <Button
+                      appearance="primary"
+                      onClick={() => void runBisect(() => api.history.bisectMark(root, true))}
+                      disabled={actionBusy}
+                    >
+                      標記 Good
+                    </Button>
+                    <Button
+                      appearance="primary"
+                      onClick={() => void runBisect(() => api.history.bisectMark(root, false))}
+                      disabled={actionBusy}
+                    >
+                      標記 Bad
+                    </Button>
+                    <Button
+                      appearance="secondary"
+                      onClick={() => void runBisect(() => api.history.bisectReset(root))}
+                      disabled={actionBusy}
+                    >
+                      Reset Bisect
+                    </Button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <Field label="Bad revision（已知有問題）">
+                    <UnderlineInput value={bisectBad} onChange={(_, data) => setBisectBad(data.value)} placeholder="HEAD" />
+                  </Field>
+                  <Field label="Good revision（已知正常）">
+                    <UnderlineInput value={bisectGood} onChange={(_, data) => setBisectGood(data.value)} placeholder="v1.0.0" />
+                  </Field>
+                  <pre className="git-command-preview">
+                    <code>{`git bisect start ${bisectBad.trim() || "HEAD"} ${bisectGood.trim() || "<good>"}`}</code>
+                  </pre>
+                </>
+              )}
+            </div>
+            <div className="modal-footer">
+              <Button appearance="secondary" onClick={() => setBisectOpen(false)} disabled={actionBusy}>
+                關閉
+              </Button>
+              {!bisect.data?.active ? (
+                <Button appearance="primary" onClick={startBisect} disabled={actionBusy || !bisectGood.trim()}>
+                  {actionBusy ? <Spinner size="tiny" /> : "開始 Bisect"}
+                </Button>
+              ) : null}
             </div>
           </div>
         </div>

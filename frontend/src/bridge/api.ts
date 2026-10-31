@@ -2,6 +2,7 @@ import { mockInvoke } from "./mock";
 import type {
   Branch,
   BranchCompare,
+  BisectState,
   BlameLine,
   CommandPreview,
   CommandRequest,
@@ -129,6 +130,12 @@ export const api = {
       invoke<RebaseTodo[]>("HistoryAPI", "RebasePlan", root, base),
     interactiveRebase: (root: string, base: string, todos: RebaseTodo[]) =>
       invoke<OperationResult>("HistoryAPI", "InteractiveRebase", root, base, todos),
+    bisectState: (root: string) => invoke<BisectState>("HistoryAPI", "BisectState", root),
+    bisectStart: (root: string, bad: string, good: string) =>
+      invoke<OperationResult>("HistoryAPI", "BisectStart", root, bad, good),
+    bisectMark: (root: string, good: boolean) =>
+      invoke<OperationResult>("HistoryAPI", "BisectMark", root, good),
+    bisectReset: (root: string) => invoke<OperationResult>("HistoryAPI", "BisectReset", root),
     reflog: (root: string, limit: number) =>
       invoke<ReflogEntry[]>("HistoryAPI", "Reflog", root, limit),
     undoInfo: (root: string) => invoke<UndoRecord>("HistoryAPI", "UndoInfo", root),

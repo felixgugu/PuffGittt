@@ -440,6 +440,31 @@ func (a *HistoryAPI) InteractiveRebase(root, base string, todos []model.RebaseTo
 	return result, err
 }
 
+func (a *HistoryAPI) BisectState(root string) (model.BisectState, error) {
+	return a.s.runnerWithSettings().BisectState(a.s.context(), root)
+}
+
+func (a *HistoryAPI) BisectStart(root, bad, good string) (model.OperationResult, error) {
+	mu := a.s.repoLock(root)
+	mu.Lock()
+	defer mu.Unlock()
+	return a.s.runnerWithSettings().BisectStart(a.s.context(), root, bad, good)
+}
+
+func (a *HistoryAPI) BisectMark(root string, good bool) (model.OperationResult, error) {
+	mu := a.s.repoLock(root)
+	mu.Lock()
+	defer mu.Unlock()
+	return a.s.runnerWithSettings().BisectMark(a.s.context(), root, good)
+}
+
+func (a *HistoryAPI) BisectReset(root string) (model.OperationResult, error) {
+	mu := a.s.repoLock(root)
+	mu.Lock()
+	defer mu.Unlock()
+	return a.s.runnerWithSettings().BisectReset(a.s.context(), root)
+}
+
 func (a *HistoryAPI) CherryPick(root, oid, mainline string) (model.OperationResult, error) {
 	mu := a.s.repoLock(root)
 	mu.Lock()

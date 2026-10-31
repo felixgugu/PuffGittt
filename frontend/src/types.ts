@@ -118,6 +118,13 @@ export interface RebaseTodo {
   subject: string;
 }
 
+export interface BisectState {
+  active: boolean;
+  branch?: string;
+  current?: string;
+  log?: string;
+}
+
 export interface Worktree {
   path: string;
   head: string;

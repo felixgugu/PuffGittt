@@ -140,6 +140,13 @@ type Submodule struct {
 	Status   string `json:"status"`
 }
 
+type BisectState struct {
+	Active  bool   `json:"active"`
+	Branch  string `json:"branch,omitempty"`
+	Current string `json:"current,omitempty"`
+	Log     string `json:"log,omitempty"`
+}
+
 type CommitDetail struct {
 	Commit Commit       `json:"commit"`
 	Files  []CommitFile `json:"files"`

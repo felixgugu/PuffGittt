@@ -76,7 +76,7 @@ recommended implementation order.
 | Provider integrations / PRs | Yes | Yes | No | P2 |
 | Custom actions | Yes | Yes | No | P3 |
 | Embedded terminal | Yes | No | No | P3 |
-| Bisect | Yes | Partial | No | P3 |
+| Bisect | Yes | Partial | Yes | P3 |
 | Sparse checkout | Yes | Partial | No | P3 |
 | Image diff | Yes | Yes | Basic | P2 |
 | Signed commits | Yes | Partial | No | P2 |
