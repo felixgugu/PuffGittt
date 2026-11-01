@@ -17,7 +17,7 @@ PuffGittt 目前已經從「可用的 Git 前端」進展到可以支撐日常�
 - Branches 支援完整生命週期、Remote 管理、Branch Compare、Worktree、Submodule。
 - Sync 支援 fetch / pull / push / force-with-lease。
 - Tags、Stashes、Conflicts、File History、Blame、Image Diff 都已具備基礎能力。
-- Repository change monitor 會自動刷新開啟中的 repo。
+- Repository change watcher（fsnotify + debounce + status fingerprint）會自動刷新開啟中的 repo。
 - Commit 草稿會依 repository 保存。
 
 與 SmartGit / SourceTree 的主要差距，已經不是「缺少基本 Git 操作」，而是以下幾類：
@@ -138,7 +138,7 @@ PuffGittt 目前已經從「可用的 Git 前端」進展到可以支撐日常�
 | Worktree | 完成 | list / add / remove / prune |
 | Submodule | 部分 | list / update / sync；無 add / remove / `.gitmodules` 編輯 |
 | Git LFS | 完成 | 偵測、patterns、檔案、track / untrack、pull / push |
-| Repository change monitor | 部分 | 1.5 秒 polling，非 fsnotify |
+| Repository change monitor | 完成 | fsnotify + 350ms debounce；10s / 1.5s polling fallback |
 | Background task queue | 部分 | 長操作使用 per-repo queue、StatusBar 顯示與取消；pull / merge / rebase 不可取消 |
 | Diagnostics export | 未實作 | |
 | Installer / code signing / updater | 未實作 | 目前只有 exe |
@@ -188,7 +188,7 @@ PuffGittt 目前已經從「可用的 Git 前端」進展到可以支撐日常�
 | Custom actions | 有 | 有 | 無 | P2 |
 | Embedded terminal | 有 | 無 | 無 | P3 |
 | Provider / PR 整合 | 有 | 有 | 無 | P3 |
-| File watcher | 有 | 有 | 部分（polling） | P1 |
+| File watcher | 有 | 有 | 有 | - |
 | Background tasks / 取消 | 有 | 有 | 部分 | P0 |
 | 高對比 / 無障礙 | 有 | 有 | 部分 | P2 |
 | Draft persistence | 部分 | 部分 | 有 | - |
@@ -443,28 +443,32 @@ PuffGittt 目前已經從「可用的 Git 前端」進展到可以支撐日常�
 
 ### P1-6：真正的 File watcher（fsnotify + debounce）
 
-**現況**
+**狀態：已實作**
 
-- 目前用 1.5 秒 polling `git status`。
-- 對大型 repo 會增加 CPU / IO。
-- 外部 `git` 指令變更通常可在 1.5 秒內看到，但不是即時。
+**已完成**
 
-**建議範圍**
+- 使用 fsnotify 監控 repo root、worktree 與 `.git`。
+- 350ms debounce。
+- 事件後以 porcelain status fingerprint 確認，避免重複刷新。
+- 忽略 `node_modules`、`.git/objects`、`.git/logs`、`dist`、`build` 等高頻路徑。
+- 新目錄建立時自動加入 watch。
+- 超過 2500 個目錄時退回 polling。
+- Polling fallback：有 watcher 時每 10 秒，無 watcher 時每 1.5 秒。
+- 只在 repo 開啟時監控，關閉 tab 時停止並釋放 watcher。
 
-- 使用 fsnotify 監控 `.git` 與 worktree。
-- Debounce 200–500ms。
-- 忽略 `node_modules`、`.git/objects` 等高頻路徑。
-- Polling 作為 fallback。
-- 只在 repo 開啟時監控，關閉 tab 時停止。
+**限制**
 
-**驗收條件**
+- Windows 沒有原生 recursive watch，仍需逐一目錄加入。
+- 大型 monorepo 可能超過 watch 目錄上限，此時只有 polling。
+- 尚未提供 watcher 狀態或手動暫停選項。
 
-- 外部修改檔案後 < 1 秒內 UI 更新。
-- 大量檔案變更不會造成事件風暴。
-- 關閉 tab 後 watcher 正確釋放。
+**驗收結果**
 
-**成本**：Medium  
-**風險**：Medium（Windows 檔案事件、遞迴監控）
+- 外部修改檔案後通常 < 1 秒內刷新。
+- 事件風暴會被 debounce 與 fingerprint 過濾。
+- 關閉 tab 後不再收到該 repo 事件。
+
+**剩餘風險**：Medium（Windows 檔案事件、watch 上限）
 
 ---
 
@@ -639,7 +643,7 @@ PuffGittt 目前已經從「可用的 Git 前端」進展到可以支撐日常�
 
 1. Background task queue、進度、取消（已完成）。
 2. Multi-step Undo 與 destructive operation backup（已完成：history 操作）。
-3. fsnotify watcher + debounce（polling fallback）。
+3. fsnotify watcher + debounce（已完成）。
 4. Commit 搜尋補完（已完成：message / author / SHA / path）。
 
 **完成後效果**
@@ -696,15 +700,17 @@ PuffGittt 目前已經從「可用的 Git 前端」進展到可以支撐日常�
 - Hunk 面板使用結構化資料，Monaco 仍使用純文字。
 - 後續若要做 gutter staging、conflict hunk、stash partial apply，建議抽出共用 patch / hunk model。
 
-### 6.2 Watcher 仍是 polling
+### 6.2 Watcher 的 Windows 限制
 
-- 目前 1.5 秒 polling 對一般 repo 足夠，但大型 repo 會增加負擔。
-- 需要 fsnotify、debounce、忽略清單與 fallback。
+- 已使用 fsnotify + 350ms debounce + fingerprint 確認。
+- Windows 沒有原生 recursive watch，需逐一目錄加入；超過 2500 個目錄時退回 polling。
+- 需持續測試大型 monorepo、網路磁碟與 editor atomic save 行為。
 
-### 6.3 Undo 只在記憶體
+### 6.3 Undo 備份範圍
 
-- 單步、重啟消失、沒有 worktree backup。
-- 這是目前 destructive operation 最大的風險。
+- 已支援最近 20 筆持久化 undo，並為 history 操作建立 tracked worktree backup。
+- Discard、未追蹤檔案與 backup retention policy 仍未涵蓋。
+- 只剩最新一筆可依序復原，不能跳過較新的記錄。
 
 ### 6.4 認證與 SSH 缺口
 

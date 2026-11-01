@@ -6,13 +6,26 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"io/fs"
+	"os"
+	"path/filepath"
+	"strings"
 	"sync"
 	"time"
+
+	"github.com/fsnotify/fsnotify"
 
 	"github.com/felixgugu/puffgittt/internal/model"
 )
 
-const repoPollInterval = 1500 * time.Millisecond
+const (
+	repoDebounce                = 350 * time.Millisecond
+	repoFallbackInterval        = 10 * time.Second
+	repoFallbackIntervalNoWatch = 1500 * time.Millisecond
+	maxWatchDirectories         = 2500
+)
+
+var errWatchLimit = fmt.Errorf("watch directory limit reached")
 
 type repoMonitor struct {
 	root string
@@ -21,10 +34,10 @@ type repoMonitor struct {
 	last string
 }
 
-// WatchRepository starts a lightweight repository change monitor. It polls the
-// porcelain status (which includes HEAD, branch and ahead/behind state) and
-// emits a "repo:changed" event when the fingerprint changes. Polling keeps the
-// implementation cross-platform and avoids watching large dependency trees.
+// WatchRepository starts a filesystem watcher for an open repository. Changes
+// are debounced, then confirmed with a porcelain status fingerprint before a
+// "repo:changed" event is emitted. Polling remains as a fallback for missed
+// events and for repositories that exceed the watch limit.
 func (s *Service) WatchRepository(root string) {
 	if root == "" {
 		return
@@ -63,34 +76,175 @@ func (s *Service) CloseWatchers() {
 }
 
 func (s *Service) monitorRepo(monitor *repoMonitor) {
-	ticker := time.NewTicker(repoPollInterval)
+	s.refreshFingerprint(monitor, false)
+
+	watcher, err := newRepoWatcher(monitor.root)
+	if err != nil {
+		watcher = nil
+	}
+	var events <-chan fsnotify.Event
+	var errors <-chan error
+	interval := repoFallbackIntervalNoWatch
+	if watcher != nil {
+		defer watcher.Close()
+		events = watcher.Events
+		errors = watcher.Errors
+		interval = repoFallbackInterval
+	}
+	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
+
+	var timer *time.Timer
+	var debounce <-chan time.Time
+	schedule := func() {
+		if timer == nil {
+			timer = time.NewTimer(repoDebounce)
+		} else {
+			if !timer.Stop() {
+				select {
+				case <-timer.C:
+				default:
+				}
+			}
+			timer.Reset(repoDebounce)
+		}
+		debounce = timer.C
+	}
+
 	for {
 		select {
 		case <-monitor.stop:
+			if timer != nil {
+				timer.Stop()
+			}
 			return
 		case <-ticker.C:
-			status, err := s.runnerWithSettings().Status(s.context(), monitor.root)
-			if err != nil {
+			s.refreshFingerprint(monitor, true)
+		case event, ok := <-events:
+			if !ok {
+				events = nil
 				continue
 			}
-			fingerprint := statusFingerprint(status)
-			if monitor.last == "" {
-				monitor.last = fingerprint
+			if shouldIgnoreWatchPath(monitor.root, event.Name) {
 				continue
 			}
-			if fingerprint == monitor.last {
-				continue
+			if event.Op&fsnotify.Create != 0 {
+				if info, err := os.Stat(event.Name); err == nil && info.IsDir() {
+					_ = addWatchTree(watcher, monitor.root, event.Name)
+				}
 			}
-			monitor.last = fingerprint
-			s.emitMu.Lock()
-			emit := s.emit
-			s.emitMu.Unlock()
-			if emit != nil {
-				emit("repo:changed", map[string]string{"root": monitor.root})
+			schedule()
+		case _, ok := <-errors:
+			if !ok {
+				errors = nil
 			}
+		case <-debounce:
+			debounce = nil
+			s.refreshFingerprint(monitor, true)
 		}
 	}
+}
+
+func (s *Service) refreshFingerprint(monitor *repoMonitor, emit bool) {
+	status, err := s.runnerWithSettings().Status(s.context(), monitor.root)
+	if err != nil {
+		return
+	}
+	fingerprint := statusFingerprint(status)
+	if monitor.last == "" {
+		monitor.last = fingerprint
+		return
+	}
+	if fingerprint == monitor.last {
+		return
+	}
+	monitor.last = fingerprint
+	if !emit {
+		return
+	}
+	s.emitMu.Lock()
+	emitter := s.emit
+	s.emitMu.Unlock()
+	if emitter != nil {
+		emitter("repo:changed", map[string]string{"root": monitor.root})
+	}
+}
+
+func newRepoWatcher(root string) (*fsnotify.Watcher, error) {
+	watcher, err := fsnotify.NewWatcher()
+	if err != nil {
+		return nil, err
+	}
+	count := 0
+	err = filepath.WalkDir(root, func(path string, entry fs.DirEntry, err error) error {
+		if err != nil {
+			return nil
+		}
+		if !entry.IsDir() {
+			return nil
+		}
+		if shouldIgnoreWatchPath(root, path) {
+			return filepath.SkipDir
+		}
+		if count >= maxWatchDirectories {
+			return errWatchLimit
+		}
+		if err := watcher.Add(path); err != nil {
+			return nil
+		}
+		count++
+		return nil
+	})
+	if err != nil {
+		watcher.Close()
+		return nil, err
+	}
+	return watcher, nil
+}
+
+func addWatchTree(watcher *fsnotify.Watcher, root, path string) error {
+	existing := len(watcher.WatchList())
+	return filepath.WalkDir(path, func(current string, entry fs.DirEntry, err error) error {
+		if err != nil {
+			return nil
+		}
+		if !entry.IsDir() {
+			return nil
+		}
+		if shouldIgnoreWatchPath(root, current) {
+			return filepath.SkipDir
+		}
+		if existing >= maxWatchDirectories {
+			return errWatchLimit
+		}
+		if err := watcher.Add(current); err == nil {
+			existing++
+		}
+		return nil
+	})
+}
+
+func shouldIgnoreWatchPath(root, path string) bool {
+	rel, err := filepath.Rel(root, path)
+	if err != nil || rel == "." {
+		return false
+	}
+	rel = filepath.ToSlash(rel)
+	parts := strings.Split(rel, "/")
+	if len(parts) > 1 && parts[0] == ".git" {
+		switch parts[1] {
+		case "objects", "logs", "lfs", "modules":
+			return true
+		}
+	}
+	for _, part := range parts {
+		switch part {
+		case "node_modules", ".next", ".nuxt", ".cache", ".venv", "__pycache__",
+			"target", "dist", "build", "coverage", ".idea", ".vscode":
+			return true
+		}
+	}
+	return false
 }
 
 func statusFingerprint(status model.Status) string {

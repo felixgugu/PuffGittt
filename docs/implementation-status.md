@@ -49,8 +49,9 @@ This file tracks the gap between the current PuffGittt build and
 - Monaco diff with inline/split toggle and a shared maximized file diff dialog.
 - Double-click a file to open the shared diff dialog with previous/next navigation.
 - File History and Blame dialog from the diff toolbar.
-- Repository change monitor polling porcelain status every 1.5 seconds; emits
-  `repo:changed` Wails events and refreshes open tabs automatically.
+- Repository change watcher with fsnotify, 350 ms debounce and status-fingerprint
+  confirmation; emits `repo:changed` Wails events. Polling fallback (10 s, or
+  1.5 s when fsnotify is unavailable) covers missed events and large trees.
 - Binary detection, image diff for common raster/SVG formats, 2 MiB text cap and
   8 MiB image cap.
 - Commit composer with subject, description, amend and per-commit identity override.
@@ -151,8 +152,8 @@ This file tracks the gap between the current PuffGittt build and
 - **Git LFS**: detects `git lfs`, shows patterns and files, supports track /
   untrack / pull / push. Stage-time LFS hints and nested `.gitattributes` are not
   implemented.
-- **Refresh**: repository change monitor polls porcelain status every 1.5 seconds;
-  there is no fsnotify watcher or per-directory event stream yet.
+- **Refresh**: fsnotify watcher with debounce and polling fallback. Very large
+  repositories over the watch-directory limit use polling only.
 - **Concurrency**: in-process per-repository task queue for long operations plus
   a write mutex; no cross-process/global task runner.
 - **Large-file safety**: 2 MiB text cap and binary detection only; no encoding,

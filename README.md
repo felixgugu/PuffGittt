@@ -47,8 +47,9 @@ wails build
   stage/unstage with patch-hash validation, commit composer and a full-height
   Monaco diff; also a shared maximized diff dialog with previous/next file
   navigation.
-- Repository change monitor: polls porcelain status and emits `repo:changed` so
-  open repositories refresh automatically after external edits or Git commands.
+- Repository change watcher: fsnotify watches `.git` and worktree directories,
+  debounces events, confirms with a status fingerprint and emits `repo:changed`;
+  polling fallback covers missed events and large trees.
 - File History and Blame dialog from the Changes diff toolbar, with per-file
   commit history and line-by-line blame.
 - Image diff for common raster formats and SVG, with side-by-side old/new previews.
