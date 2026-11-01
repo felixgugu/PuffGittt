@@ -22,20 +22,18 @@ PuffGittt 目前已經從「可用的 Git 前端」進展到可以支撐日常�
 
 與 SmartGit / SourceTree 的主要差距，已經不是「缺少基本 Git 操作」，而是以下幾類：
 
-1. **長操作管理**：background task queue、進度、取消。
-2. **安全網**：多步 Undo、destructive operation backup。
-3. **遠端認證**：SSH host-key、credential prompt、連線測試。
-4. **進階歷史編輯**：Interactive Rebase 的 reorder / reword / skip。
-5. **完整生態功能**：Git LFS、remote tags、signed commits、Git Flow、provider 整合。
-6. **大規模專案體驗**：跨頁 graph、效能、無障礙與高對比。
+1. **安全網**：多步 Undo、destructive operation backup。
+2. **遠端認證**：SSH host-key、credential prompt、連線測試。
+3. **進階歷史編輯**：Interactive Rebase 的 reorder / reword / skip。
+4. **完整生態功能**：Git LFS、remote tags、signed commits、Git Flow、provider 整合。
+5. **大規模專案體驗**：跨頁 graph、效能、無障礙與高對比。
 
 **最值得優先投入的方向：**
 
-1. Background task queue + 進度 + 取消。
-2. 多步 Undo 與 destructive operation backup。
-3. SSH / credential 流程。
-4. Interactive Rebase 補完。
-5. Remote tag 管理與 Git LFS。
+1. 多步 Undo 與 destructive operation backup。
+2. SSH / credential 流程。
+3. Interactive Rebase 補完。
+4. Remote tag 管理與 Git LFS。
 
 ---
 
@@ -141,7 +139,7 @@ PuffGittt 目前已經從「可用的 Git 前端」進展到可以支撐日常�
 | Submodule | 部分 | list / update / sync；無 add / remove / `.gitmodules` 編輯 |
 | Git LFS | 未實作 | |
 | Repository change monitor | 部分 | 1.5 秒 polling，非 fsnotify |
-| Background task queue | 未實作 | 目前以 per-repo mutex 序列化寫入 |
+| Background task queue | 部分 | 長操作使用 per-repo queue、StatusBar 顯示與取消；pull / merge / rebase 不可取消 |
 | Diagnostics export | 未實作 | |
 | Installer / code signing / updater | 未實作 | 目前只有 exe |
 
@@ -191,7 +189,7 @@ PuffGittt 目前已經從「可用的 Git 前端」進展到可以支撐日常�
 | Embedded terminal | 有 | 無 | 無 | P3 |
 | Provider / PR 整合 | 有 | 有 | 無 | P3 |
 | File watcher | 有 | 有 | 部分（polling） | P1 |
-| Background tasks / 取消 | 有 | 有 | 無 | P0 |
+| Background tasks / 取消 | 有 | 有 | 部分 | P0 |
 | 高對比 / 無障礙 | 有 | 有 | 部分 | P2 |
 | Draft persistence | 部分 | 部分 | 有 | - |
 | Installer / updater / signing | 有 | 有 | 無 | P2 |
@@ -206,35 +204,32 @@ PuffGittt 目前已經從「可用的 Git 前端」進展到可以支撐日常�
 
 ### P0-1：Background task queue、進度與取消
 
-**現況**
+**狀態：已實作（長操作）**
 
-- Wails API 直接等待 Git 指令完成。
-- 每個 repo 只有 in-process mutex。
-- Fetch / pull / push / rebase 等長操作沒有進度或取消。
+**已完成**
 
-**為什麼值得**
-
-- SmartGit / SourceTree 在 fetch、push、rebase、checkout 時都會顯示進度與可取消狀態。
-- 大型 repo 或慢速網路下，沒有進度會讓 UI 看起來像卡死。
-- 後續的 LFS、submodule update、worktree add 都需要任務模型。
-
-**建議範圍**
-
-- 新增 `internal/task`：任務狀態、排程、取消、事件。
-- 每個 repo 一個 queue；寫入操作序列化。
+- 新增 `internal/task`：per-repository queue、任務狀態、取消、事件。
 - 任務狀態：queued / running / succeeded / failed / cancelled。
-- Wails events：`task:started`、`task:progress`、`task:finished`。
-- 前端 StatusBar / 任務面板顯示目前操作，支援取消。
-- Git 指令 stdout / stderr 逐行轉成進度事件。
+- Wails events：`task:queued`、`task:started`、`task:progress`、`task:finished`。
+- Git stdout / stderr 逐行轉成進度事件。
+- StatusBar 顯示目前操作、Git 進度與取消按鈕。
+- 已接入 Fetch、Push、Publish、Clone、Submodule update/sync、Worktree、Merge、
+  Rebase、Interactive Rebase、Continue / Abort。
 
-**驗收條件**
+**限制**
 
-- 同時觸發兩個寫入操作時，第二個進入 queue，不會交錯執行。
-- 長操作可取消，且 repo 不會留在半完成狀態；不能取消的操作要明確顯示。
-- UI 關閉或切換 tab 後，任務仍可完成並更新狀態。
+- Pull、Merge、Rebase 等會改寫工作區的操作標記為不可取消。
+- Cancel 依賴 Git process 結束；若 Git 忽略終止訊號，任務會停在「正在取消」。
+- Clone 被取消時可能留下部分目錄，尚未自動清理。
+- 尚未使用 Windows Job Object 保證子行程樹完整結束。
 
-**成本**：Large  
-**風險**：Medium（跨 goroutine、Wails 事件生命週期）
+**驗收結果**
+
+- 同一 repo 的長操作會排隊，不會交錯執行。
+- 可取消操作會顯示取消按鈕；不可取消操作不顯示。
+- 切換 tab 或關閉畫面後，任務仍會在背景完成並更新事件。
+
+**剩餘風險**：Medium（跨 goroutine、Wails 事件生命週期、子行程清理）
 
 ---
 
@@ -628,7 +623,7 @@ PuffGittt 目前已經從「可用的 Git 前端」進展到可以支撐日常�
 
 ### Wave A：安全網與基礎建設
 
-1. Background task queue、進度、取消。
+1. Background task queue、進度、取消（已完成）。
 2. Multi-step Undo 與 destructive operation backup。
 3. fsnotify watcher + debounce（polling fallback）。
 4. Commit 搜尋補完（已完成：message / author / SHA / path）。
@@ -772,7 +767,7 @@ G:\PuffGittt-TestRepo
 
 PuffGittt 已經具備一套完整的日常 Git 工作流，與 SmartGit / SourceTree 的差距主要集中在：
 
-1. **長操作與安全網**：task queue、進度、取消、多步 undo、backup。
+1. **安全網**：多步 undo、backup。
 2. **遠端認證**：credential、SSH host-key。
 3. **進階歷史編輯**：rebase reorder / reword / skip、conflict hunk。
 4. **生態功能**：LFS、remote tags、signed commits、Git Flow、providers。
@@ -780,8 +775,8 @@ PuffGittt 已經具備一套完整的日常 Git 工作流，與 SmartGit / Sourc
 
 若只能選三個下一步，建議順序是：
 
-1. **Background task queue + 進度 + 取消**
-2. **多步 Undo + destructive operation backup**
-3. **Credential / SSH 流程**
+1. **多步 Undo + destructive operation backup**
+2. **Credential / SSH 流程**
+3. **Interactive Rebase 補完**
 
-這三項完成後，PuffGittt 在「可靠性」與「真實世界可用性」會明顯接近 SmartGit / SourceTree，之後再投入 LFS、rebase 補完與 history UX，會比較穩定。
+這三項完成後，PuffGittt 在「可靠性」與「真實世界可用性」會明顯接近 SmartGit / SourceTree，之後再投入 LFS、remote tags 與 history UX，會比較穩定。

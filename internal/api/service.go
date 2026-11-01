@@ -17,6 +17,7 @@ import (
 	"github.com/felixgugu/puffgittt/internal/git"
 	"github.com/felixgugu/puffgittt/internal/model"
 	"github.com/felixgugu/puffgittt/internal/platform"
+	"github.com/felixgugu/puffgittt/internal/task"
 )
 
 type Service struct {
@@ -31,6 +32,7 @@ type Service struct {
 	watchers map[string]*repoMonitor
 	emitMu   sync.Mutex
 	emit     func(name string, data interface{})
+	tasks    *task.Manager
 }
 
 func New(cfg *config.Config) *Service {
@@ -39,6 +41,7 @@ func New(cfg *config.Config) *Service {
 		runner:   git.NewRunner(),
 		undo:     map[string]model.UndoRecord{},
 		watchers: map[string]*repoMonitor{},
+		tasks:    task.NewManager(),
 	}
 }
 
@@ -143,6 +146,7 @@ type SyncAPI struct{ s *Service }
 type ConflictAPI struct{ s *Service }
 type StashAPI struct{ s *Service }
 type TagAPI struct{ s *Service }
+type TaskAPI struct{ s *Service }
 
 func NewAppAPI(s *Service) *AppAPI           { return &AppAPI{s: s} }
 func NewRepoAPI(s *Service) *RepoAPI         { return &RepoAPI{s: s} }
@@ -154,6 +158,7 @@ func NewSyncAPI(s *Service) *SyncAPI         { return &SyncAPI{s: s} }
 func NewConflictAPI(s *Service) *ConflictAPI { return &ConflictAPI{s: s} }
 func NewStashAPI(s *Service) *StashAPI       { return &StashAPI{s: s} }
 func NewTagAPI(s *Service) *TagAPI           { return &TagAPI{s: s} }
+func NewTaskAPI(s *Service) *TaskAPI         { return &TaskAPI{s: s} }
 
 func (a *AppAPI) GetEnvironment() model.Environment {
 	env := model.Environment{GitFound: false, GoVersion: goruntime.Version(), Wails: "v2.17.0"}
@@ -366,7 +371,9 @@ func (a *AppAPI) InitializeRepository(path, initialBranch string) (model.Reposit
 }
 
 func (a *AppAPI) CloneRepository(url, parentPath, directoryName string) (model.Repository, error) {
-	repo, err := a.s.runnerWithSettings().Clone(a.s.context(), url, parentPath, directoryName)
+	repo, err := runTask(a.s, "", "Clone "+strings.TrimSpace(url), true, func(ctx context.Context) (model.Repository, error) {
+		return a.s.runnerWithSettings().Clone(ctx, url, parentPath, directoryName)
+	})
 	if err != nil {
 		return model.Repository{}, err
 	}
@@ -406,17 +413,21 @@ func (a *RepoAPI) GetSubmodules(root string) ([]model.Submodule, error) {
 }
 
 func (a *RepoAPI) UpdateSubmodule(root, path string) (model.OperationResult, error) {
-	mu := a.s.repoLock(root)
-	mu.Lock()
-	defer mu.Unlock()
-	return a.s.runnerWithSettings().UpdateSubmodule(a.s.context(), root, path)
+	return runTask(a.s, root, "Update submodule "+strings.TrimSpace(path), true, func(ctx context.Context) (model.OperationResult, error) {
+		mu := a.s.repoLock(root)
+		mu.Lock()
+		defer mu.Unlock()
+		return a.s.runnerWithSettings().UpdateSubmodule(ctx, root, path)
+	})
 }
 
 func (a *RepoAPI) SyncSubmodules(root string) (model.OperationResult, error) {
-	mu := a.s.repoLock(root)
-	mu.Lock()
-	defer mu.Unlock()
-	return a.s.runnerWithSettings().SyncSubmodules(a.s.context(), root)
+	return runTask(a.s, root, "Sync submodules", true, func(ctx context.Context) (model.OperationResult, error) {
+		mu := a.s.repoLock(root)
+		mu.Lock()
+		defer mu.Unlock()
+		return a.s.runnerWithSettings().SyncSubmodules(ctx, root)
+	})
 }
 
 func (a *ChangeAPI) GetDiff(root, path, side, revision string) (model.DiffDocument, error) {
@@ -521,15 +532,17 @@ func (a *HistoryAPI) RebasePlan(root, base string) ([]model.RebaseTodo, error) {
 }
 
 func (a *HistoryAPI) InteractiveRebase(root, base string, todos []model.RebaseTodo) (model.OperationResult, error) {
-	mu := a.s.repoLock(root)
-	mu.Lock()
-	defer mu.Unlock()
-	before := a.s.headOid(root)
-	result, err := a.s.runnerWithSettings().InteractiveRebase(a.s.context(), root, base, todos)
-	if err == nil {
-		a.s.recordUndo(root, "Interactive rebase", before)
-	}
-	return result, err
+	return runTask(a.s, root, "Interactive rebase", false, func(ctx context.Context) (model.OperationResult, error) {
+		mu := a.s.repoLock(root)
+		mu.Lock()
+		defer mu.Unlock()
+		before := a.s.headOid(root)
+		result, err := a.s.runnerWithSettings().InteractiveRebase(ctx, root, base, todos)
+		if err == nil {
+			a.s.recordUndo(root, "Interactive rebase", before)
+		}
+		return result, err
+	})
 }
 
 func (a *HistoryAPI) BisectState(root string) (model.BisectState, error) {
@@ -631,27 +644,31 @@ func (a *BranchAPI) CheckoutRemote(root, localName, remoteBranch string) (model.
 }
 
 func (a *BranchAPI) Merge(root, source, strategy string) (model.OperationResult, error) {
-	mu := a.s.repoLock(root)
-	mu.Lock()
-	defer mu.Unlock()
-	before := a.s.headOid(root)
-	result, err := a.s.runnerWithSettings().Merge(a.s.context(), root, source, strategy)
-	if err == nil {
-		a.s.recordUndo(root, "Merge", before)
-	}
-	return result, err
+	return runTask(a.s, root, "Merge "+strings.TrimSpace(source), false, func(ctx context.Context) (model.OperationResult, error) {
+		mu := a.s.repoLock(root)
+		mu.Lock()
+		defer mu.Unlock()
+		before := a.s.headOid(root)
+		result, err := a.s.runnerWithSettings().Merge(ctx, root, source, strategy)
+		if err == nil {
+			a.s.recordUndo(root, "Merge", before)
+		}
+		return result, err
+	})
 }
 
 func (a *BranchAPI) Rebase(root, onto string) (model.OperationResult, error) {
-	mu := a.s.repoLock(root)
-	mu.Lock()
-	defer mu.Unlock()
-	before := a.s.headOid(root)
-	result, err := a.s.runnerWithSettings().Rebase(a.s.context(), root, onto)
-	if err == nil {
-		a.s.recordUndo(root, "Rebase", before)
-	}
-	return result, err
+	return runTask(a.s, root, "Rebase onto "+strings.TrimSpace(onto), false, func(ctx context.Context) (model.OperationResult, error) {
+		mu := a.s.repoLock(root)
+		mu.Lock()
+		defer mu.Unlock()
+		before := a.s.headOid(root)
+		result, err := a.s.runnerWithSettings().Rebase(ctx, root, onto)
+		if err == nil {
+			a.s.recordUndo(root, "Rebase", before)
+		}
+		return result, err
+	})
 }
 
 func (a *BranchAPI) Preview(root string, req model.CommandRequest) (model.CommandPreview, error) {
@@ -667,17 +684,21 @@ func (a *BranchAPI) Worktrees(root string) ([]model.Worktree, error) {
 }
 
 func (a *BranchAPI) AddWorktree(root, path, branch string, createBranch bool) (model.OperationResult, error) {
-	mu := a.s.repoLock(root)
-	mu.Lock()
-	defer mu.Unlock()
-	return a.s.runnerWithSettings().AddWorktree(a.s.context(), root, path, branch, createBranch)
+	return runTask(a.s, root, "Add worktree "+strings.TrimSpace(path), true, func(ctx context.Context) (model.OperationResult, error) {
+		mu := a.s.repoLock(root)
+		mu.Lock()
+		defer mu.Unlock()
+		return a.s.runnerWithSettings().AddWorktree(ctx, root, path, branch, createBranch)
+	})
 }
 
 func (a *BranchAPI) RemoveWorktree(root, path string, force bool) (model.OperationResult, error) {
-	mu := a.s.repoLock(root)
-	mu.Lock()
-	defer mu.Unlock()
-	return a.s.runnerWithSettings().RemoveWorktree(a.s.context(), root, path, force)
+	return runTask(a.s, root, "Remove worktree "+strings.TrimSpace(path), true, func(ctx context.Context) (model.OperationResult, error) {
+		mu := a.s.repoLock(root)
+		mu.Lock()
+		defer mu.Unlock()
+		return a.s.runnerWithSettings().RemoveWorktree(ctx, root, path, force)
+	})
 }
 
 func (a *BranchAPI) PruneWorktrees(root string) (model.OperationResult, error) {
@@ -692,38 +713,48 @@ func (a *SyncAPI) ListRemotes(root string) ([]model.Remote, error) {
 }
 
 func (a *SyncAPI) Fetch(root, remote string) (model.OperationResult, error) {
-	mu := a.s.repoLock(root)
-	mu.Lock()
-	defer mu.Unlock()
-	return a.s.runnerWithSettings().Fetch(a.s.context(), root, remote)
+	return runTask(a.s, root, "Fetch "+strings.TrimSpace(remote), true, func(ctx context.Context) (model.OperationResult, error) {
+		mu := a.s.repoLock(root)
+		mu.Lock()
+		defer mu.Unlock()
+		return a.s.runnerWithSettings().Fetch(ctx, root, remote)
+	})
 }
 
 func (a *SyncAPI) Pull(root, remote, branch, strategy string) (model.OperationResult, error) {
-	mu := a.s.repoLock(root)
-	mu.Lock()
-	defer mu.Unlock()
-	return a.s.runnerWithSettings().Pull(a.s.context(), root, remote, branch, strategy)
+	return runTask(a.s, root, "Pull "+strings.TrimSpace(remote+" "+branch), false, func(ctx context.Context) (model.OperationResult, error) {
+		mu := a.s.repoLock(root)
+		mu.Lock()
+		defer mu.Unlock()
+		return a.s.runnerWithSettings().Pull(ctx, root, remote, branch, strategy)
+	})
 }
 
 func (a *SyncAPI) Push(root, remote, branch string, forceWithLease bool) (model.OperationResult, error) {
-	mu := a.s.repoLock(root)
-	mu.Lock()
-	defer mu.Unlock()
-	return a.s.runnerWithSettings().Push(a.s.context(), root, remote, branch, forceWithLease)
+	return runTask(a.s, root, "Push "+strings.TrimSpace(branch), true, func(ctx context.Context) (model.OperationResult, error) {
+		mu := a.s.repoLock(root)
+		mu.Lock()
+		defer mu.Unlock()
+		return a.s.runnerWithSettings().Push(ctx, root, remote, branch, forceWithLease)
+	})
 }
 
 func (a *SyncAPI) Publish(root, remote, branch string) (model.OperationResult, error) {
-	mu := a.s.repoLock(root)
-	mu.Lock()
-	defer mu.Unlock()
-	return a.s.runnerWithSettings().PublishBranch(a.s.context(), root, remote, branch)
+	return runTask(a.s, root, "Publish "+strings.TrimSpace(branch), true, func(ctx context.Context) (model.OperationResult, error) {
+		mu := a.s.repoLock(root)
+		mu.Lock()
+		defer mu.Unlock()
+		return a.s.runnerWithSettings().PublishBranch(ctx, root, remote, branch)
+	})
 }
 
 func (a *SyncAPI) DeleteRemoteBranch(root, remote, branch string) (model.OperationResult, error) {
-	mu := a.s.repoLock(root)
-	mu.Lock()
-	defer mu.Unlock()
-	return a.s.runnerWithSettings().DeleteRemoteBranch(a.s.context(), root, remote, branch)
+	return runTask(a.s, root, "Delete remote branch "+strings.TrimSpace(branch), true, func(ctx context.Context) (model.OperationResult, error) {
+		mu := a.s.repoLock(root)
+		mu.Lock()
+		defer mu.Unlock()
+		return a.s.runnerWithSettings().DeleteRemoteBranch(ctx, root, remote, branch)
+	})
 }
 
 func (a *SyncAPI) AddRemote(root, name, url string) (model.OperationResult, error) {
@@ -774,17 +805,21 @@ func (a *ConflictAPI) Resolve(root, path string) (model.OperationResult, error) 
 }
 
 func (a *ConflictAPI) Continue(root, operation string) (model.OperationResult, error) {
-	mu := a.s.repoLock(root)
-	mu.Lock()
-	defer mu.Unlock()
-	return a.s.runnerWithSettings().ContinueOperation(a.s.context(), root, operation)
+	return runTask(a.s, root, "Continue "+operation, false, func(ctx context.Context) (model.OperationResult, error) {
+		mu := a.s.repoLock(root)
+		mu.Lock()
+		defer mu.Unlock()
+		return a.s.runnerWithSettings().ContinueOperation(ctx, root, operation)
+	})
 }
 
 func (a *ConflictAPI) Abort(root, operation string) (model.OperationResult, error) {
-	mu := a.s.repoLock(root)
-	mu.Lock()
-	defer mu.Unlock()
-	return a.s.runnerWithSettings().AbortOperation(a.s.context(), root, operation)
+	return runTask(a.s, root, "Abort "+operation, false, func(ctx context.Context) (model.OperationResult, error) {
+		mu := a.s.repoLock(root)
+		mu.Lock()
+		defer mu.Unlock()
+		return a.s.runnerWithSettings().AbortOperation(ctx, root, operation)
+	})
 }
 
 func (a *StashAPI) List(root string) ([]model.StashEntry, error) {
@@ -846,4 +881,12 @@ func (a *TagAPI) PushAll(root, remote string) (model.OperationResult, error) {
 	mu.Lock()
 	defer mu.Unlock()
 	return a.s.runnerWithSettings().PushAllTags(a.s.context(), root, remote)
+}
+
+func (a *TaskAPI) List() []task.Task {
+	return a.s.tasks.List()
+}
+
+func (a *TaskAPI) Cancel(id string) {
+	a.s.tasks.Cancel(id)
 }

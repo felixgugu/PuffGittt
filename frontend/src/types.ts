@@ -281,3 +281,17 @@ export interface UndoRecord {
   afterOid?: string;
   time: string;
 }
+
+export type TaskState = "queued" | "running" | "succeeded" | "failed" | "cancelled";
+
+export interface TaskInfo {
+  id: string;
+  root: string;
+  operation: string;
+  state: TaskState;
+  cancellable: boolean;
+  message?: string;
+  createdAt: string;
+  startedAt?: string;
+  finishedAt?: string;
+}

@@ -22,6 +22,7 @@ import type {
   Status,
   Submodule,
   Tag,
+  TaskInfo,
   UndoRecord,
   Worktree,
   WorkspaceRepository,
@@ -486,6 +487,10 @@ export async function mockInvoke<T>(group: string, method: string, args: any[]):
     case "TagAPI.Push":
     case "TagAPI.PushAll":
       return ok("Tag pushed") as T;
+    case "TaskAPI.List":
+      return [] as TaskInfo[] as T;
+    case "TaskAPI.Cancel":
+      return undefined as T;
     case "AppAPI.OpenInExplorer":
     case "AppAPI.OpenExternal":
     case "AppAPI.WatchRepository":

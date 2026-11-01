@@ -31,6 +31,7 @@ func main() {
 	conflictAPI := api.NewConflictAPI(service)
 	stashAPI := api.NewStashAPI(service)
 	tagAPI := api.NewTagAPI(service)
+	taskAPI := api.NewTaskAPI(service)
 
 	err := wails.Run(&options.App{
 		Title:            "PuffGittt",
@@ -58,6 +59,7 @@ func main() {
 			conflictAPI,
 			stashAPI,
 			tagAPI,
+			taskAPI,
 		},
 		Windows: &windows.Options{
 			BackdropType:         windows.Mica,

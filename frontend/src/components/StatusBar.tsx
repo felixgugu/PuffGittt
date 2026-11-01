@@ -1,14 +1,16 @@
-import { Badge } from "@fluentui/react-components";
+import { Badge, Spinner } from "@fluentui/react-components";
 import { useTranslation } from "react-i18next";
-import type { Status } from "../types";
+import type { Status, TaskInfo } from "../types";
 
 interface StatusBarProps {
   status?: Status;
   language: string;
   message?: string;
+  task?: TaskInfo;
+  onCancelTask?: (id: string) => void;
 }
 
-export function StatusBar({ status, language, message }: StatusBarProps) {
+export function StatusBar({ status, language, message, task, onCancelTask }: StatusBarProps) {
   const { t } = useTranslation();
   return (
     <footer className="status-bar">
@@ -33,7 +35,22 @@ export function StatusBar({ status, language, message }: StatusBarProps) {
           </>
         ) : null}
       </div>
-      <div className="status-message" title={message}>{message || ""}</div>
+      {task ? (
+        <div className="status-task" title={task.message || task.operation}>
+          <Spinner size="extra-tiny" />
+          <span className="status-task-operation">{task.operation}</span>
+          <span className="status-task-message">
+            {task.message || (task.state === "queued" ? "等待中" : "執行中")}
+          </span>
+          {task.cancellable && task.state === "running" && onCancelTask ? (
+            <button type="button" className="status-task-cancel" onClick={() => onCancelTask(task.id)}>
+              取消
+            </button>
+          ) : null}
+        </div>
+      ) : (
+        <div className="status-message" title={message}>{message || ""}</div>
+      )}
       <div className="status-right">
         <span>{language === "zh-TW" ? "繁體中文" : "English"}</span>
         <span>UTF-8</span>

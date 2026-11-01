@@ -1,9 +1,11 @@
 package api
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"sync"
 	"time"
 
@@ -104,4 +106,27 @@ func (s *Service) SetEventEmitter(emit func(name string, data interface{})) {
 	s.emitMu.Lock()
 	s.emit = emit
 	s.emitMu.Unlock()
+	if s.tasks != nil {
+		s.tasks.SetEmitter(emit)
+	}
+}
+
+func runTask[T any](s *Service, root, operation string, cancellable bool, fn func(context.Context) (T, error)) (T, error) {
+	base := s.context()
+	if base == nil {
+		base = context.Background()
+	}
+	value, err := s.tasks.Run(base, root, operation, cancellable, func(ctx context.Context) (any, error) {
+		return fn(ctx)
+	})
+	if value == nil {
+		var zero T
+		return zero, err
+	}
+	result, ok := value.(T)
+	if !ok {
+		var zero T
+		return zero, fmt.Errorf("unexpected task result")
+	}
+	return result, err
 }

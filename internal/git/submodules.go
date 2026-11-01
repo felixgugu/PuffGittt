@@ -58,7 +58,7 @@ func (r *Runner) UpdateSubmodule(ctx context.Context, root, path string) (model.
 	if strings.TrimSpace(path) != "" {
 		args = append(args, "--", path)
 	}
-	out, errOut, err := r.RunBytes(ctx, repo.RootPath, nil, args...)
+	out, errOut, err := r.RunTask(ctx, repo.RootPath, nil, args...)
 	if err != nil {
 		return model.OperationResult{Success: false, Message: "Submodule update failed", Output: strings.TrimSpace(out + "\n" + errOut)}, r.OutputError(out, errOut, err)
 	}
@@ -70,7 +70,7 @@ func (r *Runner) SyncSubmodules(ctx context.Context, root string) (model.Operati
 	if err != nil {
 		return model.OperationResult{}, err
 	}
-	out, errOut, err := r.RunBytes(ctx, repo.RootPath, nil, "submodule", "sync", "--recursive")
+	out, errOut, err := r.RunTask(ctx, repo.RootPath, nil, "submodule", "sync", "--recursive")
 	if err != nil {
 		return model.OperationResult{Success: false, Message: "Submodule sync failed", Output: strings.TrimSpace(out + "\n" + errOut)}, r.OutputError(out, errOut, err)
 	}

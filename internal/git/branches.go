@@ -186,7 +186,7 @@ func (r *Runner) Merge(ctx context.Context, root, source, strategy string) (mode
 	if err != nil {
 		return model.OperationResult{}, err
 	}
-	out, errOut, err := r.RunBytes(ctx, repo.RootPath, nil, MergeArgs(source, strategy)...)
+	out, errOut, err := r.RunTask(ctx, repo.RootPath, nil, MergeArgs(source, strategy)...)
 	if err != nil {
 		return model.OperationResult{Success: false, Message: "Merge requires attention", Output: strings.TrimSpace(out + "\n" + errOut)}, r.OutputError(out, errOut, err)
 	}
@@ -198,7 +198,7 @@ func (r *Runner) Rebase(ctx context.Context, root, onto string) (model.Operation
 	if err != nil {
 		return model.OperationResult{}, err
 	}
-	out, errOut, err := r.RunBytes(ctx, repo.RootPath, nil, RebaseArgs(onto)...)
+	out, errOut, err := r.RunTask(ctx, repo.RootPath, nil, RebaseArgs(onto)...)
 	if err != nil {
 		return model.OperationResult{Success: false, Message: "Rebase requires attention", Output: strings.TrimSpace(out + "\n" + errOut)}, r.OutputError(out, errOut, err)
 	}

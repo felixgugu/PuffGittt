@@ -56,7 +56,9 @@ This file tracks the gap between the current PuffGittt build and
 - Commit composer with subject, description, amend and per-commit identity override.
 - Commit message drafts persisted per repository.
 - Commit message passed through stdin to `git commit -F -`.
-- In-process per-repository write lock.
+- Per-repository task queue for long-running Git operations with queued / running /
+  succeeded / failed / cancelled states, Wails events and status-bar progress.
+- Cancellation for fetch, push, publish, clone, submodule update and worktree operations.
 
 ### History
 - `git log --topo-order` with bounded 200-commit pages.
@@ -143,7 +145,8 @@ This file tracks the gap between the current PuffGittt build and
 - **Settings identity**: used for commits via `git -c`, not written to repo config.
 - **Refresh**: repository change monitor polls porcelain status every 1.5 seconds;
   there is no fsnotify watcher or per-directory event stream yet.
-- **Concurrency**: in-process mutex only; no cross-process/global task runner.
+- **Concurrency**: in-process per-repository task queue for long operations plus
+  a write mutex; no cross-process/global task runner.
 - **Large-file safety**: 2 MiB text cap and binary detection only; no encoding,
   CRLF, filter or special-file fallback UI.
 - **Accessibility**: keyboard shortcuts for open/settings/views only; no complete
@@ -178,7 +181,6 @@ This file tracks the gap between the current PuffGittt build and
 - Credential prompts and SSH host-key verification.
 - Backup retention and restore UI.
 - High-contrast theme.
-- Background task queue with progress events, cancellation and Job Object handling.
 - Diagnostics export, updater, installer, code signing and CI packaging.
 - Full test suite (unit/integration/UI) and performance benchmarks.
 

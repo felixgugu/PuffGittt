@@ -25,6 +25,7 @@ import type {
   Status,
   Submodule,
   Tag,
+  TaskInfo,
   UndoRecord,
   Worktree,
   WorkspaceRepository,
@@ -221,5 +222,9 @@ export const api = {
     push: (root: string, remote: string, name: string) =>
       invoke<OperationResult>("TagAPI", "Push", root, remote, name),
     pushAll: (root: string, remote: string) => invoke<OperationResult>("TagAPI", "PushAll", root, remote),
+  },
+  task: {
+    list: () => invoke<TaskInfo[]>("TaskAPI", "List"),
+    cancel: (id: string) => invoke<void>("TaskAPI", "Cancel", id),
   },
 };

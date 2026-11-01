@@ -105,7 +105,7 @@ func (r *Runner) Fetch(ctx context.Context, root, remote string) (model.Operatio
 	if err != nil {
 		return model.OperationResult{}, err
 	}
-	out, errOut, err := r.RunBytes(ctx, repo.RootPath, nil, FetchArgs(remote)...)
+	out, errOut, err := r.RunTask(ctx, repo.RootPath, nil, FetchArgs(remote)...)
 	if err != nil {
 		return model.OperationResult{Success: false, Message: "Fetch failed", Output: strings.TrimSpace(out + "\n" + errOut)}, r.OutputError(out, errOut, err)
 	}
@@ -117,7 +117,7 @@ func (r *Runner) Pull(ctx context.Context, root, remote, branch, strategy string
 	if err != nil {
 		return model.OperationResult{}, err
 	}
-	out, errOut, err := r.RunBytes(ctx, repo.RootPath, nil, PullArgs(remote, branch, strategy)...)
+	out, errOut, err := r.RunTask(ctx, repo.RootPath, nil, PullArgs(remote, branch, strategy)...)
 	if err != nil {
 		return model.OperationResult{Success: false, Message: "Pull failed", Output: strings.TrimSpace(out + "\n" + errOut)}, r.OutputError(out, errOut, err)
 	}
@@ -129,7 +129,7 @@ func (r *Runner) Push(ctx context.Context, root, remote, branch string, forceWit
 	if err != nil {
 		return model.OperationResult{}, err
 	}
-	out, errOut, err := r.RunBytes(ctx, repo.RootPath, nil, PushArgs(remote, branch, forceWithLease)...)
+	out, errOut, err := r.RunTask(ctx, repo.RootPath, nil, PushArgs(remote, branch, forceWithLease)...)
 	if err != nil {
 		return model.OperationResult{Success: false, Message: "Push failed", Output: strings.TrimSpace(out + "\n" + errOut)}, r.OutputError(out, errOut, err)
 	}
@@ -141,7 +141,7 @@ func (r *Runner) PublishBranch(ctx context.Context, root, remote, branch string)
 	if err != nil {
 		return model.OperationResult{}, err
 	}
-	out, errOut, err := r.RunBytes(ctx, repo.RootPath, nil, PublishBranchArgs(remote, branch)...)
+	out, errOut, err := r.RunTask(ctx, repo.RootPath, nil, PublishBranchArgs(remote, branch)...)
 	if err != nil {
 		return model.OperationResult{Success: false, Message: "Publish failed", Output: strings.TrimSpace(out + "\n" + errOut)}, r.OutputError(out, errOut, err)
 	}
@@ -202,7 +202,7 @@ func (r *Runner) DeleteRemoteBranch(ctx context.Context, root, remote, branch st
 	if err != nil {
 		return model.OperationResult{}, err
 	}
-	out, errOut, err := r.RunBytes(ctx, repo.RootPath, nil, DeleteRemoteBranchArgs(remote, branch)...)
+	out, errOut, err := r.RunTask(ctx, repo.RootPath, nil, DeleteRemoteBranchArgs(remote, branch)...)
 	if err != nil {
 		return model.OperationResult{Success: false, Message: "Delete remote branch failed", Output: strings.TrimSpace(out + "\n" + errOut)}, r.OutputError(out, errOut, err)
 	}

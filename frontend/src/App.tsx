@@ -5,7 +5,7 @@ import { useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import i18n from "./i18n";
 import { api, setNativeTheme } from "./bridge/api";
 import { useActiveTab, useAppStore, type ThemeMode, type ViewKey } from "./store";
-import type { Environment, Repository, Settings, WorkspaceRepository } from "./types";
+import type { Environment, Repository, Settings, TaskInfo, WorkspaceRepository } from "./types";
 import { WelcomeView } from "./views/WelcomeView";
 import { ChangesView } from "./views/ChangesView";
 import { HistoryView } from "./views/HistoryView";
@@ -63,6 +63,7 @@ export default function App() {
   const activeTab = useActiveTab();
   const queryClient = useQueryClient();
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [tasks, setTasks] = useState<TaskInfo[]>([]);
   const [maximized, setMaximized] = useState(false);
   const [restoring, setRestoring] = useState(() => !!lastRepoPath);
   const restoreRef = useRef(false);
@@ -166,6 +167,36 @@ export default function App() {
     void queryClient.invalidateQueries({ queryKey: ["diff", target] });
     void queryClient.invalidateQueries({ queryKey: ["commit", target] });
   };
+
+  useEffect(() => {
+    const runtime = (window as any).runtime;
+    if (!runtime?.EventsOn) return;
+    const update = (value: TaskInfo | string) => {
+      const task = typeof value === "string" ? (JSON.parse(value) as TaskInfo) : value;
+      if (!task?.id) return;
+      setTasks((current) => {
+        const next = current.filter((entry) => entry.id !== task.id);
+        next.push(task);
+        return next.slice(-20);
+      });
+    };
+    const names = ["task:queued", "task:started", "task:progress", "task:finished"];
+    const handlers = names.map((name) => ({ name, off: runtime.EventsOn(name, update) }));
+    api.task
+      .list()
+      .then((list) => setTasks(list.slice(-20)))
+      .catch(() => {});
+    return () => {
+      handlers.forEach(({ name, off }) => {
+        if (typeof off === "function") off();
+        else runtime.EventsOff?.(name);
+      });
+    };
+  }, []);
+
+  const activeTask =
+    tasks.find((task) => task.state === "running") ||
+    tasks.find((task) => task.state === "queued");
 
   useEffect(() => {
     tabs.forEach((tab) => void api.app.watchRepository(tab.repo.rootPath));
@@ -395,7 +426,13 @@ export default function App() {
           </main>
         </div>
 
-        <StatusBar status={status} language={language} message={statusMessage} />
+        <StatusBar
+          status={status}
+          language={language}
+          message={statusMessage}
+          task={activeTask}
+          onCancelTask={(id) => void api.task.cancel(id)}
+        />
       </div>
 
       {settingsOpen ? (

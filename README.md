@@ -68,6 +68,8 @@ wails build
 - Submodules: list, update one/all and sync URLs.
 - Sync: fetch, pull, push, force-with-lease push, with Git command previews and
   branch ahead/behind status.
+- Long-running operations use a per-repository task queue; the status bar shows
+  Git progress and offers cancellation for supported operations.
 - Conflicts: conflict list, three-way content, editable result, one-click ours/theirs/both,
   mark resolved, continue/abort for in-progress operations.
 - Stashes: list, create, apply, pop, drop, diff preview.
@@ -89,7 +91,6 @@ current feature inventory and recommendations.
 
 Highlights:
 
-- Background task queue, progress events, cancellation and operation locks beyond the in-process mutex.
 - Git LFS.
 - SSH host-key UI and credential prompts.
 - Remote tag management and signed tags.

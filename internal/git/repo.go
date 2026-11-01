@@ -121,7 +121,7 @@ func (r *Runner) Clone(ctx context.Context, url, parentPath, directoryName strin
 	if _, err := os.Stat(target); err == nil {
 		return model.Repository{}, errors.New("target already exists")
 	}
-	if _, err := r.Run(ctx, "", "clone", "--progress", url, target); err != nil {
+	if _, _, err := r.RunTask(ctx, "", nil, "clone", "--progress", url, target); err != nil {
 		return model.Repository{}, err
 	}
 	return r.Open(ctx, target)
