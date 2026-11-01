@@ -288,7 +288,7 @@ export function ChangesView({ tab }: ChangesViewProps) {
                       aria-label="File History / Blame"
                       onClick={() => setInsightsOpen(true)}
                     />
-                    <Button size="small" appearance="subtle" icon={<FolderOpen24Regular />} title={t("changes.openInExplorer")} onClick={() => void api.app.openInExplorer(root)} />
+                    <Button size="small" appearance="subtle" icon={<FolderOpen24Regular />} title={t("changes.openInExplorer")} aria-label={t("changes.openInExplorer")} onClick={() => void api.app.openInExplorer(root).catch((error: any) => setStatusMessage(error?.message || String(error)))} />
                   </>
                 ) : null}
               </div>
