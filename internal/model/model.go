@@ -119,6 +119,7 @@ type RebaseTodo struct {
 	Oid     string `json:"oid"`
 	Action  string `json:"action"`
 	Subject string `json:"subject"`
+	Message string `json:"message,omitempty"`
 }
 
 type Worktree struct {

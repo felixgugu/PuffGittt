@@ -116,6 +116,7 @@ export interface RebaseTodo {
   oid: string;
   action: string;
   subject: string;
+  message?: string;
 }
 
 export interface BisectState {

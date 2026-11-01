@@ -9,6 +9,7 @@ import {
   Bug24Regular,
   ChevronDown24Regular,
   ChevronRight24Regular,
+  ChevronUp24Regular,
   Dismiss24Regular,
   Document24Regular,
   DocumentText24Regular,
@@ -407,7 +408,7 @@ export function HistoryView({ tab }: HistoryViewProps) {
         return;
       }
       setRebaseBase(commit.oid);
-      setRebaseTodos(plan);
+      setRebaseTodos(plan.map((todo) => ({ ...todo, message: todo.subject })));
     } catch (error: any) {
       setStatusMessage(error?.message || String(error));
     } finally {
@@ -416,7 +417,29 @@ export function HistoryView({ tab }: HistoryViewProps) {
   };
 
   const updateRebaseAction = (index: number, action: string) => {
-    setRebaseTodos((current) => current.map((todo, todoIndex) => (todoIndex === index ? { ...todo, action } : todo)));
+    setRebaseTodos((current) =>
+      current.map((todo, todoIndex) =>
+        todoIndex === index
+          ? { ...todo, action, message: action === "reword" ? todo.message || todo.subject : todo.message }
+          : todo,
+      ),
+    );
+  };
+
+  const updateRebaseMessage = (index: number, message: string) => {
+    setRebaseTodos((current) =>
+      current.map((todo, todoIndex) => (todoIndex === index ? { ...todo, message } : todo)),
+    );
+  };
+
+  const moveRebaseTodo = (index: number, offset: number) => {
+    setRebaseTodos((current) => {
+      const target = index + offset;
+      if (target < 0 || target >= current.length) return current;
+      const next = [...current];
+      [next[index], next[target]] = [next[target], next[index]];
+      return next;
+    });
   };
 
   const confirmInteractiveRebase = async () => {
@@ -1058,20 +1081,53 @@ export function HistoryView({ tab }: HistoryViewProps) {
               <pre className="git-command-preview"><code>{`git rebase -i ${shortOid(rebaseBase)}`}</code></pre>
               <div className="rebase-list">
                 {rebaseTodos.map((todo, index) => (
-                  <div className="rebase-row" key={todo.oid}>
-                    <span className="rebase-index">{index + 1}</span>
-                    <UnderlineSelect
-                      className="rebase-action"
-                      value={todo.action}
-                      onChange={(_, data) => updateRebaseAction(index, data.value)}
-                    >
-                      <option value="pick">pick</option>
-                      <option value="squash">squash</option>
-                      <option value="fixup">fixup</option>
-                      <option value="drop">drop</option>
-                    </UnderlineSelect>
-                    <code>{shortOid(todo.oid)}</code>
-                    <span className="rebase-subject" title={todo.subject}>{todo.subject}</span>
+                  <div className="rebase-item" key={todo.oid}>
+                    <div className="rebase-row">
+                      <span className="rebase-index">{index + 1}</span>
+                      <div className="rebase-order">
+                        <button
+                          type="button"
+                          className="tree-mini-button"
+                          title="上移"
+                          disabled={index === 0}
+                          onClick={() => moveRebaseTodo(index, -1)}
+                        >
+                          <ChevronUp24Regular />
+                        </button>
+                        <button
+                          type="button"
+                          className="tree-mini-button"
+                          title="下移"
+                          disabled={index === rebaseTodos.length - 1}
+                          onClick={() => moveRebaseTodo(index, 1)}
+                        >
+                          <ChevronDown24Regular />
+                        </button>
+                      </div>
+                      <UnderlineSelect
+                        className="rebase-action"
+                        value={todo.action}
+                        onChange={(_, data) => updateRebaseAction(index, data.value)}
+                      >
+                        <option value="pick">pick</option>
+                        <option value="reword">reword</option>
+                        <option value="edit">edit</option>
+                        <option value="squash">squash</option>
+                        <option value="fixup">fixup</option>
+                        <option value="drop">drop</option>
+                      </UnderlineSelect>
+                      <code>{shortOid(todo.oid)}</code>
+                      <span className="rebase-subject" title={todo.subject}>{todo.subject}</span>
+                    </div>
+                    {todo.action === "reword" ? (
+                      <div className="rebase-reword">
+                        <UnderlineInput
+                          value={todo.message || ""}
+                          onChange={(_, data) => updateRebaseMessage(index, data.value)}
+                          placeholder="新的 Commit 訊息"
+                        />
+                      </div>
+                    ) : null}
                   </div>
                 ))}
               </div>

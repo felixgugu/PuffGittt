@@ -16,7 +16,14 @@ import (
 // RunTask is RunBytes with streaming progress lines. It is used for long
 // operations so the task manager can surface Git output while the command runs.
 func (r *Runner) RunTask(ctx context.Context, dir string, input []byte, args ...string) (string, string, error) {
+	return r.RunTaskEnv(ctx, dir, input, nil, args...)
+}
+
+func (r *Runner) RunTaskEnv(ctx context.Context, dir string, input []byte, env []string, args ...string) (string, string, error) {
 	cmd := r.command(ctx, dir, args...)
+	if len(env) > 0 {
+		cmd.Env = append(cmd.Env, env...)
+	}
 	if input != nil {
 		cmd.Stdin = bytes.NewReader(input)
 	}

@@ -73,7 +73,8 @@ This file tracks the gap between the current PuffGittt build and
 - Reset Soft / Mixed / Hard, revert (non-merge) and drop commit (non-root,
   non-merge, current branch) with Git command previews.
 - Cherry-pick any commit, with mainline parent selection for merge commits.
-- Interactive rebase from a commit with pick / squash / fixup / drop actions.
+- Interactive rebase from a commit with pick / reword / edit / squash / fixup /
+  drop, reordering and conflict skip.
 - Bisect start / good / bad / reset dialog.
 - Commits / Reflog mode switch in the History page, with reflog entry details.
 - Reflog right-click menu: create branch/tag, copy OID and reset.
@@ -104,7 +105,7 @@ This file tracks the gap between the current PuffGittt build and
 - Three-way content from index stages 1/2/3.
 - Editable result, save result and mark resolved.
 - One-click use ours, use theirs or combine both in the result editor.
-- Continue/abort for merge, rebase, cherry-pick and revert.
+- Continue / skip / abort for merge, rebase, cherry-pick and revert.
 - Stash list, create, apply, pop, drop and diff preview.
 
 ### Tags
@@ -172,8 +173,9 @@ This file tracks the gap between the current PuffGittt build and
   gutter actions.
 - Backup retention policy and backup browser.
 - Reflog selectors for refs other than HEAD and cross-ref reflog browsing.
-- Interactive rebase supports pick / squash / fixup / drop in the existing order;
-  there is no drag reordering, reword or conflict Skip action.
+- Interactive rebase supports pick / reword / edit / squash / fixup / drop,
+  reordering via up/down buttons and conflict Skip; there is no drag reordering
+  or dedicated remaining-commit progress UI.
 - Blame and per-file history screens are implemented as a dialog; no dedicated
   file-history workspace or blame range selection yet.
 - Image diff (before/after, slider, checkerboard): before/after images are shown,

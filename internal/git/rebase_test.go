@@ -71,6 +71,73 @@ func TestInteractiveRebaseDropAndSquash(t *testing.T) {
 	}
 }
 
+func TestInteractiveRebaseRewordAndReorder(t *testing.T) {
+	runner, dir := setupRepo(t)
+	ctx := context.Background()
+	base := commitTestFile(t, runner, dir, "a.txt", "A")
+	commitTestFile(t, runner, dir, "b.txt", "B")
+	commitTestFile(t, runner, dir, "c.txt", "C")
+
+	plan, err := runner.RebasePlan(ctx, dir, base)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(plan) != 2 {
+		t.Fatalf("plan = %#v", plan)
+	}
+	plan[0], plan[1] = plan[1], plan[0]
+	for index := range plan {
+		if plan[index].Subject == "B" {
+			plan[index].Action = "reword"
+			plan[index].Message = "B reworded"
+		}
+	}
+	result, err := runner.InteractiveRebase(ctx, dir, base, plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !result.Success {
+		t.Fatalf("result = %#v", result)
+	}
+	log, err := runner.Run(ctx, dir, "log", "--reverse", "--format=%s", base+"..HEAD")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.TrimSpace(log) != "C\nB reworded" {
+		t.Fatalf("log = %q", log)
+	}
+}
+
+func TestInteractiveRebaseEditPauses(t *testing.T) {
+	runner, dir := setupRepo(t)
+	ctx := context.Background()
+	base := commitTestFile(t, runner, dir, "a.txt", "A")
+	commitTestFile(t, runner, dir, "b.txt", "B")
+	commitTestFile(t, runner, dir, "c.txt", "C")
+
+	plan, err := runner.RebasePlan(ctx, dir, base)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(plan) != 2 {
+		t.Fatalf("plan = %#v", plan)
+	}
+	plan[0].Action = "edit"
+	result, err := runner.InteractiveRebase(ctx, dir, base, plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !result.Success {
+		t.Fatalf("result = %#v", result)
+	}
+	if operation := runner.detectOperation(ctx, dir); operation == "normal" {
+		t.Fatalf("expected rebase to pause, output = %s", result.Output)
+	}
+	if _, err := runner.AbortOperation(ctx, dir, "rebasing"); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestInteractiveRebaseRejectsStalePlan(t *testing.T) {
 	runner, dir := setupRepo(t)
 	ctx := context.Background()

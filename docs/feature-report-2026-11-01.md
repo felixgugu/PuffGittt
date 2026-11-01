@@ -24,16 +24,16 @@ PuffGittt 目前已經從「可用的 Git 前端」進展到可以支撐日常�
 
 1. **備份安全網**：Discard 備份、未追蹤檔案、backup retention policy。
 2. **遠端認證**：SSH host-key、credential prompt、連線測試。
-3. **進階歷史編輯**：Interactive Rebase 的 reorder / reword / skip。
+3. **衝突編輯**：hunk-level conflict resolution、ours/theirs/both 進階操作。
 4. **完整生態功能**：Git LFS、remote tags、signed commits、Git Flow、provider 整合。
 5. **大規模專案體驗**：跨頁 graph、效能、無障礙與高對比。
 
 **最值得優先投入的方向：**
 
 1. SSH / credential 流程。
-2. Interactive Rebase 補完。
-3. Remote tag 管理與 Git LFS。
-4. Discard 備份與 backup retention。
+2. Remote tag 管理與 Git LFS。
+3. Discard 備份與 backup retention。
+4. Hunk-level conflict resolution。
 
 ---
 
@@ -88,7 +88,7 @@ PuffGittt 目前已經從「可用的 Git 前端」進展到可以支撐日常�
 | Cherry-pick | 完成 | 支援 merge mainline |
 | Reflog | 完成 | History 內的 Commits / Reflog 模式 |
 | Undo | 完成 | 最近 20 筆、持久化；history 操作含 tracked worktree backup |
-| Interactive Rebase | 部分 | pick / squash / fixup / drop；無 reorder / reword / conflict skip |
+| Interactive Rebase | 完成 | pick / reword / edit / squash / fixup / drop、排序、Conflict Skip |
 | Bisect | 完成 | start / good / bad / reset |
 | File History | 部分 | Dialog 呈現，尚無獨立 workspace |
 | Blame | 部分 | 逐行顯示，尚無 range / 作者統計 |
@@ -161,7 +161,7 @@ PuffGittt 目前已經從「可用的 Git 前端」進展到可以支撐日常�
 | Monaco gutter staging | 有 | 有 | 無 | P2 |
 | Commit graph | 有 | 有 | 部分 | P2 |
 | Commit 搜尋 author / SHA / path | 有 | 有 | 有 | - |
-| Interactive rebase | 有 | 有 | 部分 | P1 |
+| Interactive rebase | 有 | 有 | 有 | - |
 | Cherry-pick | 有 | 有 | 有 | - |
 | Reset / Revert / Drop | 有 | 有 | 有 | - |
 | Reflog / Undo | 有 | 部分 | 有 | - |
@@ -301,30 +301,33 @@ PuffGittt 目前已經從「可用的 Git 前端」進展到可以支撐日常�
 
 ### P1-1：Interactive Rebase 補完
 
-**現況**
+**狀態：已實作**
 
-- 支援 pick / squash / fixup / drop。
-- 不支援拖曳排序、reword、edit、conflict skip。
-- 第一個保留的 commit 必須是 pick。
+**已完成**
 
-**建議範圍**
+- 支援 pick / reword / edit / squash / fixup / drop。
+- 以「上移 / 下移」按鈕重新排序 todos。
+- 每個 reword 可輸入新的 Commit message，後端以
+  `pick` + `exec git commit --amend -F` 實作。
+- edit 會讓 rebase 停在該 Commit，提示使用者修改後 Continue。
+- Conflicts 頁面新增 Skip，支援 rebase / cherry-pick / revert。
+- Plan 過期檢查改為 OID 集合比對，允許重新排序。
 
-- Todo 拖曳排序。
-- Reword：以指定訊息改寫 commit message。
-- Edit：停下來讓使用者 amend。
-- Conflict 時提供 Continue / Skip / Abort。
-- 顯示目前 rebase 進度與剩餘 commits。
-- Plan 過期檢查與友善錯誤。
+**限制**
 
-**驗收條件**
+- 尚未支援拖曳排序（目前用上下按鈕）。
+- 尚未顯示剩餘 Commit 數的獨立進度 UI；仍顯示 Git 輸出。
+- Reword 依賴 Git shell 的 `exec`，尚未在非 Windows shell 全面驗證。
+
+**驗收結果**
 
 - 可重新排序 commits 並完成 rebase。
 - Reword 後 message 正確。
-- 衝突時可 Skip 單一 commit，且不破壞後續 todo。
+- Edit 會停在指定 Commit。
+- Conflict 時可 Skip 單一 commit。
 - 失敗後可 Abort 回到原始 HEAD。
 
-**成本**：Medium–Large  
-**風險**：Medium（歷史改寫）
+**剩餘風險**：Medium（歷史改寫、editor / shell 差異）
 
 ---
 
@@ -646,7 +649,7 @@ PuffGittt 目前已經從「可用的 Git 前端」進展到可以支撐日常�
 
 ### Wave C：歷史與衝突進階編輯
 
-1. Interactive Rebase reorder / reword / edit / skip。
+1. Interactive Rebase reorder / reword / edit / skip（已完成）。
 2. Hunk-level conflict resolution。
 3. Stash partial apply。
 4. Monaco gutter hunk actions。
@@ -765,14 +768,14 @@ PuffGittt 已經具備一套完整的日常 Git 工作流，與 SmartGit / Sourc
 
 1. **備份安全網**：Discard 備份、未追蹤檔案、backup retention。
 2. **遠端認證**：credential、SSH host-key。
-3. **進階歷史編輯**：rebase reorder / reword / skip、conflict hunk。
+3. **衝突編輯**：hunk-level conflict resolution。
 4. **生態功能**：LFS、remote tags、signed commits、Git Flow、providers。
 5. **大規模體驗**：graph 跨頁、效能、無障礙。
 
 若只能選三個下一步，建議順序是：
 
 1. **Credential / SSH 流程**
-2. **Interactive Rebase 補完**
-3. **Remote tags / Git LFS**
+2. **Remote tags / Git LFS**
+3. **Hunk-level conflict resolution**
 
 這三項完成後，PuffGittt 在「真實世界可用性」與「協作功能」會明顯接近 SmartGit / SourceTree，之後再投入 LFS、history UX 與 backup 保留策略，會比較穩定。

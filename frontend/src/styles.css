@@ -1480,8 +1480,20 @@ svg {
   font-size: var(--font-size-secondary);
 }
 
-.rebase-row:last-child {
+.rebase-item:last-child .rebase-row {
   border-bottom: 0;
+}
+
+.rebase-order {
+  flex: 0 0 auto;
+  display: flex;
+  gap: 1px;
+}
+
+.rebase-reword {
+  padding: 2px 8px 6px 56px;
+  border-bottom: 1px solid var(--border);
+  font-size: var(--font-size-secondary);
 }
 
 .rebase-index {

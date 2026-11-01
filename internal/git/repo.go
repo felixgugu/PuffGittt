@@ -65,7 +65,7 @@ func (r *Runner) Open(ctx context.Context, path string) (model.Repository, error
 
 func (r *Runner) detectOperation(ctx context.Context, root string) string {
 	check := func(name string) bool {
-		out, err := r.Run(ctx, root, "rev-parse", "--git-path", name)
+		out, err := r.Run(ctx, root, "rev-parse", "--path-format=absolute", "--git-path", name)
 		if err != nil {
 			return false
 		}

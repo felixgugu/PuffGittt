@@ -51,29 +51,37 @@ func (r *Runner) InteractiveRebase(ctx context.Context, root, base string, todos
 	if len(todos) != len(actual) {
 		return model.OperationResult{}, fmt.Errorf("Rebase 計畫已失效，請重新載入")
 	}
-	for index := range actual {
-		if actual[index].Oid != todos[index].Oid {
+	actualSet := map[string]bool{}
+	for _, todo := range actual {
+		actualSet[todo.Oid] = true
+	}
+	seen := map[string]bool{}
+	kept := 0
+	for _, todo := range todos {
+		if !actualSet[todo.Oid] || seen[todo.Oid] {
 			return model.OperationResult{}, fmt.Errorf("Rebase 計畫已失效，請重新載入")
 		}
-	}
-	firstKept := false
-	for _, todo := range todos {
+		seen[todo.Oid] = true
 		switch todo.Action {
-		case "pick", "squash", "fixup", "drop":
+		case "pick", "reword", "edit":
+			kept++
+		case "squash", "fixup":
+			if kept == 0 {
+				return model.OperationResult{}, fmt.Errorf("squash / fixup 前面必須有可合併的 Commit")
+			}
+			kept++
+		case "drop":
 		default:
 			return model.OperationResult{}, fmt.Errorf("不支援的 rebase 動作 %q", todo.Action)
 		}
-		if todo.Action == "drop" {
-			continue
-		}
-		if !firstKept {
-			if todo.Action != "pick" {
-				return model.OperationResult{}, fmt.Errorf("第一個保留的 Commit 必須是 pick")
-			}
-			firstKept = true
+		if todo.Action == "reword" && strings.TrimSpace(todo.Message) == "" {
+			return model.OperationResult{}, fmt.Errorf("reword 需要新的 Commit 訊息")
 		}
 	}
-	if !firstKept {
+	if len(seen) != len(actualSet) {
+		return model.OperationResult{}, fmt.Errorf("Rebase 計畫已失效，請重新載入")
+	}
+	if kept == 0 {
 		return model.OperationResult{}, fmt.Errorf("至少要保留一個 Commit")
 	}
 
@@ -86,11 +94,30 @@ func (r *Runner) InteractiveRebase(ctx context.Context, root, base string, todos
 	todoPath := filepath.Join(tempDir, "todo.txt")
 
 	var todoBuilder strings.Builder
-	for _, todo := range todos {
+	for index, todo := range todos {
 		if todo.Action == "drop" {
 			continue
 		}
 		subject := strings.ReplaceAll(strings.ReplaceAll(todo.Subject, "\r", " "), "\n", " ")
+		if todo.Action == "reword" {
+			messagePath := filepath.Join(tempDir, fmt.Sprintf("message-%d.txt", index))
+			message := strings.TrimSpace(todo.Message)
+			if message == "" {
+				message = subject
+			}
+			if err := os.WriteFile(messagePath, []byte(message+"\n"), 0o644); err != nil {
+				return model.OperationResult{}, err
+			}
+			todoBuilder.WriteString("pick ")
+			todoBuilder.WriteString(todo.Oid)
+			todoBuilder.WriteByte(' ')
+			todoBuilder.WriteString(subject)
+			todoBuilder.WriteByte('\n')
+			todoBuilder.WriteString("exec ")
+			todoBuilder.WriteString(CommandString([]string{"commit", "--amend", "-F", filepath.ToSlash(messagePath)}))
+			todoBuilder.WriteByte('\n')
+			continue
+		}
 		todoBuilder.WriteString(todo.Action)
 		todoBuilder.WriteByte(' ')
 		todoBuilder.WriteString(todo.Oid)
@@ -106,9 +133,12 @@ func (r *Runner) InteractiveRebase(ctx context.Context, root, base string, todos
 		"GIT_SEQUENCE_EDITOR=cp '" + filepath.ToSlash(todoPath) + "'",
 		"GIT_EDITOR=true",
 	}
-	out, errOut, err := r.RunBytesEnv(ctx, repo.RootPath, nil, env, "rebase", "-i", base)
+	out, errOut, err := r.RunTaskEnv(ctx, repo.RootPath, nil, env, "rebase", "-i", base)
 	if err != nil {
 		return model.OperationResult{Success: false, Message: "Interactive rebase requires attention", Output: strings.TrimSpace(out + "\n" + errOut)}, r.OutputError(out, errOut, err)
+	}
+	if r.detectOperation(ctx, repo.RootPath) != "normal" {
+		return model.OperationResult{Success: true, Message: "Interactive rebase 已暫停，請處理後 Continue 或 Abort", Output: strings.TrimSpace(out + "\n" + errOut)}, nil
 	}
 	return model.OperationResult{Success: true, Message: "Interactive rebase complete", Output: strings.TrimSpace(out + "\n" + errOut)}, nil
 }

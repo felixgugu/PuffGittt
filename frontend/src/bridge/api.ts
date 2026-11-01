@@ -205,6 +205,7 @@ export const api = {
     continue: (root: string, operation: string) =>
       invoke<OperationResult>("ConflictAPI", "Continue", root, operation),
     abort: (root: string, operation: string) => invoke<OperationResult>("ConflictAPI", "Abort", root, operation),
+    skip: (root: string, operation: string) => invoke<OperationResult>("ConflictAPI", "Skip", root, operation),
   },
   stash: {
     list: (root: string) => invoke<StashEntry[]>("StashAPI", "List", root),

@@ -57,7 +57,8 @@ wails build
   prefix / path, virtualized commit list, SVG lane graph,
   resizable commit details/changed files, tree/flat changed-file modes, commit diff
   dialog, create branch/tag, copy OID, reset, revert, drop commit, cherry-pick
-  (including merge mainline selection), interactive rebase and bisect, all through
+  (including merge mainline selection), interactive rebase (reorder / reword /
+  edit / squash / fixup / drop / skip) and bisect, all through
   a right-click context menu or History toolbar with Git command previews.
 - Persisted multi-step Undo history with tracked worktree backups for destructive
   history operations.
@@ -73,7 +74,7 @@ wails build
 - Long-running operations use a per-repository task queue; the status bar shows
   Git progress and offers cancellation for supported operations.
 - Conflicts: conflict list, three-way content, editable result, one-click ours/theirs/both,
-  mark resolved, continue/abort for in-progress operations.
+  mark resolved, continue / skip / abort for in-progress operations.
 - Stashes: list, create, apply, pop, drop, diff preview.
 - Tags: list, create lightweight/annotated tags, delete tags, push a tag and push all tags.
 - Settings: theme, language, base font size and family, projects folder,

@@ -937,6 +937,14 @@ func (a *ConflictAPI) Continue(root, operation string) (model.OperationResult, e
 	})
 }
 
+func (a *ConflictAPI) Skip(root, operation string) (model.OperationResult, error) {
+	return runTask(a.s, root, "Skip "+operation, false, func(ctx context.Context) (model.OperationResult, error) {
+		mu := a.s.repoLock(root)
+		mu.Lock()
+		defer mu.Unlock()
+		return a.s.runnerWithSettings().SkipOperation(ctx, root, operation)
+	})
+}
 func (a *ConflictAPI) Abort(root, operation string) (model.OperationResult, error) {
 	return runTask(a.s, root, "Abort "+operation, false, func(ctx context.Context) (model.OperationResult, error) {
 		mu := a.s.repoLock(root)

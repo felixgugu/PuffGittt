@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Badge, Button, Spinner } from "@fluentui/react-components";
 import {
   ArrowSync24Regular,
+  ArrowRight24Regular,
   Checkmark24Regular,
   Dismiss24Regular,
   Save24Regular,
@@ -102,6 +103,17 @@ export function ConflictsView({ tab }: ConflictsViewProps) {
                     onClick={() => void run("abort", () => api.conflict.abort(root, operation), t("common.cancel"))}
                     disabled={!!busy}
                   />
+                  {operation === "rebasing" || operation === "cherryPicking" || operation === "reverting" ? (
+                    <Button
+                      size="small"
+                      appearance="subtle"
+                      icon={<ArrowRight24Regular />}
+                      title="Skip 目前步驟"
+                      aria-label="Skip 目前步驟"
+                      onClick={() => void run("skip", () => api.conflict.skip(root, operation), "已略過目前步驟")}
+                      disabled={!!busy}
+                    />
+                  ) : null}
                 </>
               ) : null}
             </div>

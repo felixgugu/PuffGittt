@@ -129,6 +129,29 @@ func (r *Runner) ContinueOperation(ctx context.Context, root, operation string) 
 	return model.OperationResult{Success: true, Message: "Operation continued", Output: strings.TrimSpace(out)}, nil
 }
 
+func (r *Runner) SkipOperation(ctx context.Context, root, operation string) (model.OperationResult, error) {
+	repo, err := r.Open(ctx, root)
+	if err != nil {
+		return model.OperationResult{}, err
+	}
+	args := []string{}
+	switch operation {
+	case "rebasing":
+		args = []string{"rebase", "--skip"}
+	case "cherryPicking":
+		args = []string{"cherry-pick", "--skip"}
+	case "reverting":
+		args = []string{"revert", "--skip"}
+	default:
+		return model.OperationResult{}, errors.New("this operation cannot skip the current step")
+	}
+	out, errOut, err := r.RunBytes(ctx, repo.RootPath, nil, args...)
+	if err != nil {
+		return model.OperationResult{Success: false, Message: "Skip needs attention", Output: strings.TrimSpace(out + "\n" + errOut)}, r.OutputError(out, errOut, err)
+	}
+	return model.OperationResult{Success: true, Message: "Operation skipped", Output: strings.TrimSpace(out)}, nil
+}
+
 func (r *Runner) AbortOperation(ctx context.Context, root, operation string) (model.OperationResult, error) {
 	repo, err := r.Open(ctx, root)
 	if err != nil {

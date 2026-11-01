@@ -470,8 +470,7 @@ export async function mockInvoke<T>(group: string, method: string, args: any[]):
       return { command: commands[request.action] || "git", destructive: request.action === "delete-remote" } as CommandPreview as T;
     }
     case "ConflictAPI.List":
-      return [] as ConflictFile[] as T;
-    case "ConflictAPI.GetVersions":
+      return [] as ConflictFile[] as T;    case "ConflictAPI.GetVersions":
       return {
         path: args[1],
         base: "",
@@ -488,6 +487,7 @@ export async function mockInvoke<T>(group: string, method: string, args: any[]):
     case "ConflictAPI.Resolve":
     case "ConflictAPI.Continue":
     case "ConflictAPI.Abort":
+    case "ConflictAPI.Skip":
       return ok("Resolved") as T;
     case "StashAPI.List":
       return [] as StashEntry[] as T;
