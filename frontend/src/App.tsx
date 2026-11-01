@@ -82,9 +82,9 @@ export default function App() {
     refetchInterval: 10_000,
   });
   const workspaceQuery = useQuery({
-    queryKey: ["workspaceRepositories", settings?.projectsRoot],
+    queryKey: ["workspaceRepositories"],
     queryFn: () => api.app.listWorkspaceRepositories(),
-    enabled: !!settings,
+    refetchInterval: 30_000,
   });
   const status = statusQuery.data;
 
@@ -134,8 +134,6 @@ export default function App() {
     void queryClient.invalidateQueries({ queryKey: ["remotes", target] });
     void queryClient.invalidateQueries({ queryKey: ["diff", target] });
     void queryClient.invalidateQueries({ queryKey: ["commit", target] });
-    void queryClient.invalidateQueries({ queryKey: ["workspaceRepositories"] });
-    void queryClient.invalidateQueries({ queryKey: ["recent"] });
   };
 
   useEffect(() => {
@@ -159,6 +157,8 @@ export default function App() {
     openTab(repo);
     setStatusMessage(t("changes.operationDone"));
     invalidateRepo(repo.rootPath);
+    void queryClient.invalidateQueries({ queryKey: ["workspaceRepositories"] });
+    void queryClient.invalidateQueries({ queryKey: ["recent"] });
   };
 
   const handleCloseTab = (id: string) => {
@@ -249,7 +249,6 @@ export default function App() {
         { queryKey: ["workspaceRepositories"] },
         repositories,
       );
-      void queryClient.invalidateQueries({ queryKey: ["workspaceRepositories"] });
       setStatusMessage(`已從專案清單移除 ${repo.name}`);
     } catch (error: any) {
       setStatusMessage(error?.message || String(error));

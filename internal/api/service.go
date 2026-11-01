@@ -187,41 +187,33 @@ func (a *AppAPI) RemoveRecent(path string) error {
 func (a *AppAPI) ListWorkspaceRepositories() []model.WorkspaceRepository {
 	settings := a.s.cfg.LoadSettings()
 	runner := a.s.runnerWithSettings()
-	seen := map[string]bool{}
 	hidden := map[string]bool{}
 	for _, path := range settings.HiddenProjects {
 		hidden[workspacePathKey(path)] = true
 	}
-	result := []model.WorkspaceRepository{}
 
-	add := func(path, kind string) {
+	type candidate struct {
+		path string
+		kind string
+	}
+	candidates := []candidate{}
+	seen := map[string]bool{}
+	addCandidate := func(path, kind string) {
 		if strings.TrimSpace(path) == "" {
 			return
 		}
-		repo, err := runner.Open(a.s.context(), path)
-		if err != nil {
-			return
-		}
-		key := workspacePathKey(repo.RootPath)
+		key := workspacePathKey(path)
 		if seen[key] || hidden[key] {
 			return
 		}
 		seen[key] = true
-		changes := 0
-		if status, err := runner.Status(a.s.context(), repo.RootPath); err == nil {
-			changes = len(status.Files)
-		}
-		result = append(result, model.WorkspaceRepository{
-			Name:    repo.Name,
-			Path:    repo.RootPath,
-			Branch:  repo.Branch,
-			Changes: changes,
-			Kind:    kind,
-		})
+		candidates = append(candidates, candidate{path: path, kind: kind})
 	}
 
 	if strings.TrimSpace(settings.ProjectsRoot) != "" {
-		add(settings.ProjectsRoot, "project")
+		if looksLikeRepository(settings.ProjectsRoot) {
+			addCandidate(settings.ProjectsRoot, "project")
+		}
 		if entries, err := os.ReadDir(settings.ProjectsRoot); err == nil {
 			for _, entry := range entries {
 				if !entry.IsDir() {
@@ -231,17 +223,53 @@ func (a *AppAPI) ListWorkspaceRepositories() []model.WorkspaceRepository {
 				if strings.HasPrefix(name, ".") || name == "node_modules" {
 					continue
 				}
-				add(filepath.Join(settings.ProjectsRoot, name), "project")
+				path := filepath.Join(settings.ProjectsRoot, name)
+				if looksLikeRepository(path) {
+					addCandidate(path, "project")
+				}
 			}
 		}
 	}
 	for _, path := range settings.WorkspaceFolders {
-		add(path, "workspace")
+		addCandidate(path, "workspace")
 	}
 	for _, recent := range settings.Recent {
-		add(recent.Path, "recent")
+		addCandidate(recent.Path, "recent")
 	}
 
+	results := make([]model.WorkspaceRepository, len(candidates))
+	valid := make([]bool, len(candidates))
+	workers := 4
+	if len(candidates) < workers {
+		workers = len(candidates)
+	}
+	if workers > 0 {
+		sem := make(chan struct{}, workers)
+		var wg sync.WaitGroup
+		for index, entry := range candidates {
+			wg.Add(1)
+			go func(index int, entry candidate) {
+				defer wg.Done()
+				sem <- struct{}{}
+				defer func() { <-sem }()
+				repo, ok := runner.WorkspaceStatus(a.s.context(), entry.path)
+				if !ok {
+					return
+				}
+				repo.Kind = entry.kind
+				results[index] = repo
+				valid[index] = true
+			}(index, entry)
+		}
+		wg.Wait()
+	}
+
+	result := make([]model.WorkspaceRepository, 0, len(candidates))
+	for index := range results {
+		if valid[index] {
+			result = append(result, results[index])
+		}
+	}
 	rank := func(kind string) int {
 		switch kind {
 		case "project":
@@ -259,6 +287,14 @@ func (a *AppAPI) ListWorkspaceRepositories() []model.WorkspaceRepository {
 		return strings.ToLower(result[i].Name) < strings.ToLower(result[j].Name)
 	})
 	return result
+}
+
+func looksLikeRepository(path string) bool {
+	if strings.TrimSpace(path) == "" {
+		return false
+	}
+	_, err := os.Stat(filepath.Join(path, ".git"))
+	return err == nil
 }
 
 func (a *AppAPI) AddWorkspaceFolder(path string) (model.Repository, error) {
