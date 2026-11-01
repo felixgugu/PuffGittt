@@ -103,7 +103,7 @@ PuffGittt 目前已經從「可用的 Git 前端」進展到可以支撐日常�
 | Rename / Set upstream | 完成 | |
 | Publish / Checkout remote / Delete remote branch | 完成 | |
 | Delete local branch | 完成 | 含 force |
-| Branch compare | 部分 | ahead / behind、commits、files；尚無 compare 內 diff |
+| Branch compare | 完成 | ahead / behind、commits、files、內嵌 diff |
 | Fetch / Pull / Push | 完成 | 指令預覽 |
 | Force-with-lease | 完成 | 右鍵操作 |
 | Remote 管理 | 完成 | 新增 / 修改 URL / 刪除 |
@@ -169,7 +169,7 @@ PuffGittt 目前已經從「可用的 Git 前端」進展到可以支撐日常�
 | Bisect | 有 | 部分 | 有 | - |
 | Blame | 有 | 有 | 部分 | P2 |
 | File history | 有 | 有 | 部分 | P2 |
-| Branch compare | 有 | 有 | 部分 | P2 |
+| Branch compare | 有 | 有 | 有 | - |
 | Conflict editor | 有 | 有 | 部分 | P1 |
 | Image diff | 有 | 有 | 部分 | P2 |
 | Branch lifecycle | 有 | 有 | 有 | - |
@@ -512,19 +512,29 @@ PuffGittt 目前已經從「可用的 Git 前端」進展到可以支撐日常�
 
 ### P2-3：Branch compare 內嵌 diff
 
-**現況**
+**狀態：已實作**
 
-- 已有 ahead / behind、unique commits、changed files。
-- 不能從 compare 直接看檔案 diff。
+**已完成**
 
-**建議範圍**
+- Compare 對話框列出 changed files。
+- 點選檔案會開啟共用的 FileDiffDialog。
+- Diff 使用 `base...compare` 的 merge-base 作為 old side、compare 作為 new side。
+- 支援上一個 / 下一個檔案、單欄 / 並排、最大化與圖片 diff。
+- 變更 base / compare 時會關閉已開啟的 compare diff。
 
-- 點選 changed file 開啟 compare diff。
-- 支援 base...compare 的 old / new。
-- 與 FileDiffDialog 共用。
+**限制**
 
-**成本**：Small–Medium  
-**風險**：Low
+- 只支援文字與圖片 diff；binary 顯示提示。
+- Compare 對話框尚未支援直接 stage / unstage（compare 是唯讀）。
+- 尚未支援多選檔案或 commit range 自訂。
+
+**驗收結果**
+
+- 可從 compare 的 changed file 直接檢視 diff。
+- 可利用上一個 / 下一個在 compare 檔案間切換。
+- base / compare 切換後 diff 不會顯示舊資料。
+
+**剩餘風險**：Low（大型 diff、binary 檔案）
 
 ---
 
@@ -675,7 +685,7 @@ PuffGittt 目前已經從「可用的 Git 前端」進展到可以支撐日常�
 
 ### Wave D：History 體驗與比較
 
-1. Branch compare 內嵌 diff。
+1. Branch compare 內嵌 diff（已完成）。
 2. File History workspace / Blame range。
 3. 跨頁 graph frontier。
 4. Image diff slider。

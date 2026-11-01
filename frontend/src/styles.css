@@ -1369,6 +1369,46 @@ svg {
   white-space: nowrap;
 }
 
+.compare-files {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 180px;
+  overflow: auto;
+  border-top: 1px solid var(--border);
+  padding-top: 6px;
+}
+
+.compare-files-title {
+  padding: 2px 4px;
+  color: var(--text-tertiary);
+  font-size: var(--font-size-secondary);
+  font-weight: 600;
+}
+
+.compare-file {
+  all: unset;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 6px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: var(--font-size-secondary);
+}
+
+.compare-file:hover {
+  background: var(--surface-muted);
+}
+
+.compare-file-path {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .file-insights-modal {
   width: min(1000px, 94vw);
   height: 78vh;

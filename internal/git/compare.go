@@ -2,6 +2,9 @@ package git
 
 import (
 	"context"
+	"encoding/base64"
+	"fmt"
+	"path/filepath"
 	"strings"
 
 	"github.com/felixgugu/puffgittt/internal/model"
@@ -77,6 +80,60 @@ func (r *Runner) CompareBranches(ctx context.Context, root, base, compare string
 		}
 	}
 	return result, nil
+}
+
+// CompareDiff returns the file diff introduced by compare relative to the
+// merge-base of base and compare, matching `git diff base...compare -- path`.
+func (r *Runner) CompareDiff(ctx context.Context, root, base, compare, path string) (model.DiffDocument, error) {
+	repo, err := r.Open(ctx, root)
+	if err != nil {
+		return model.DiffDocument{}, err
+	}
+	if err := r.verifyRevision(ctx, repo.RootPath, base); err != nil {
+		return model.DiffDocument{}, err
+	}
+	if err := r.verifyRevision(ctx, repo.RootPath, compare); err != nil {
+		return model.DiffDocument{}, err
+	}
+	path = filepath.ToSlash(path)
+	doc := model.DiffDocument{Path: path, Side: "compare", Language: languageForPath(path)}
+	out, errOut, err := r.RunBytes(ctx, repo.RootPath, nil, "merge-base", base, compare)
+	if err != nil {
+		return model.DiffDocument{}, r.OutputError(out, errOut, err)
+	}
+	mergeBase := strings.TrimSpace(out)
+	if mergeBase == "" {
+		return model.DiffDocument{}, fmt.Errorf("branches have no common ancestor")
+	}
+
+	if mime := imageMimeForPath(path); mime != "" {
+		oldBytes := r.showBlobBytes(ctx, repo.RootPath, mergeBase+":"+path)
+		newBytes := r.showBlobBytes(ctx, repo.RootPath, compare+":"+path)
+		if len(oldBytes) <= maxImageBytes && len(newBytes) <= maxImageBytes {
+			doc.Binary = true
+			doc.Image = true
+			doc.ImageMime = mime
+			doc.OldImage = base64.StdEncoding.EncodeToString(oldBytes)
+			doc.NewImage = base64.StdEncoding.EncodeToString(newBytes)
+			return doc, nil
+		}
+	}
+
+	doc.OldText = r.showBlob(ctx, repo.RootPath, mergeBase+":"+path)
+	doc.NewText = r.showBlob(ctx, repo.RootPath, compare+":"+path)
+	if isBinaryText(doc.OldText) || isBinaryText(doc.NewText) {
+		doc.Binary = true
+		return doc, nil
+	}
+	if len(doc.OldText) > maxTextBytes {
+		doc.OldText = doc.OldText[:maxTextBytes]
+		doc.Truncated = true
+	}
+	if len(doc.NewText) > maxTextBytes {
+		doc.NewText = doc.NewText[:maxTextBytes]
+		doc.Truncated = true
+	}
+	return doc, nil
 }
 
 func atoiSafe(value string) int {

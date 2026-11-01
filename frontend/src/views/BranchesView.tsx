@@ -18,10 +18,13 @@ import { useTranslation } from "react-i18next";
 import { api } from "../bridge/api";
 import { ContextMenu } from "../components/ContextMenu";
 import { GitCommandDialog } from "../components/GitCommandDialog";
+import { FileDiffDialog } from "../components/FileDiffDialog";
+import { DiffEditor } from "../components/DiffEditor";
+import { ImageDiff } from "../components/ImageDiff";
 import { UnderlineInput, UnderlineSelect } from "../components/FormControls";
 import { useAppStore, type RepoTab } from "../store";
-import type { Branch, CommandPreview, CommandRequest, OperationResult } from "../types";
-import { formatDate, shortOid } from "../lib/format";
+import type { Branch, CommandPreview, CommandRequest, CommitFile, OperationResult } from "../types";
+import { fileStatusClass, fileStatusLabel, formatDate, shortOid } from "../lib/format";
 
 interface BranchesViewProps {
   tab: RepoTab;
@@ -63,6 +66,9 @@ export function BranchesView({ tab }: BranchesViewProps) {
   const [compareOpen, setCompareOpen] = useState(false);
   const [compareBase, setCompareBase] = useState("");
   const [compareBranch, setCompareBranch] = useState("");
+  const [compareFile, setCompareFile] = useState<CommitFile | null>(null);
+  const [compareSplit, setCompareSplit] = useState(false);
+  const [compareMaximized, setCompareMaximized] = useState(true);
   const [worktreesOpen, setWorktreesOpen] = useState(false);
   const [worktreePath, setWorktreePath] = useState("");
   const [worktreeBranch, setWorktreeBranch] = useState("");
@@ -81,6 +87,13 @@ export function BranchesView({ tab }: BranchesViewProps) {
     queryFn: () => api.branch.compare(root, compareBase, compareBranch),
     enabled: compareOpen && !!compareBase && !!compareBranch,
   });
+  const compareDiff = useQuery({
+    queryKey: ["compare-diff", root, compareBase, compareBranch, compareFile?.path],
+    queryFn: () => api.branch.compareDiff(root, compareBase, compareBranch, compareFile!.path),
+    enabled: !!compareFile && !!compareBase && !!compareBranch,
+  });
+  const compareFiles = compareQuery.data?.files || [];
+  const compareFileIndex = compareFile ? compareFiles.findIndex((file) => file.path === compareFile.path) : -1;
   const worktrees = useQuery({
     queryKey: ["worktrees", root],
     queryFn: () => api.branch.worktrees(root),
@@ -508,6 +521,11 @@ export function BranchesView({ tab }: BranchesViewProps) {
     setCompareBase(currentBranch.name);
     setCompareBranch(branch.name);
     setCompareOpen(true);
+  };
+
+  const closeCompare = () => {
+    setCompareOpen(false);
+    setCompareFile(null);
   };
 
   const fetchTooltip = remoteName ? t("branches.fetchHint", { remote: remoteName }) : t("branches.noRemote");
@@ -1061,17 +1079,23 @@ export function BranchesView({ tab }: BranchesViewProps) {
       {compareOpen ? (
         <div
           className="modal-backdrop"
-          onMouseDown={(event) => event.target === event.currentTarget && setCompareOpen(false)}
+          onMouseDown={(event) => event.target === event.currentTarget && closeCompare()}
         >
           <div className="modal compare-modal" role="dialog" aria-modal="true" aria-label="比較分支">
             <div className="modal-header">
               <h2>比較分支</h2>
-              <Button appearance="subtle" icon={<Dismiss24Regular />} onClick={() => setCompareOpen(false)} />
+              <Button appearance="subtle" icon={<Dismiss24Regular />} onClick={closeCompare} />
             </div>
             <div className="modal-body form-stack">
               <div className="compare-controls">
                 <Field label="Base">
-                  <UnderlineSelect value={compareBase} onChange={(_, data) => setCompareBase(data.value)}>
+                  <UnderlineSelect
+                    value={compareBase}
+                    onChange={(_, data) => {
+                      setCompareFile(null);
+                      setCompareBase(data.value);
+                    }}
+                  >
                     {local.map((entry) => (
                       <option key={entry.name} value={entry.name}>
                         {entry.name}
@@ -1081,7 +1105,13 @@ export function BranchesView({ tab }: BranchesViewProps) {
                 </Field>
                 <span className="compare-arrow">↔</span>
                 <Field label="Compare">
-                  <UnderlineSelect value={compareBranch} onChange={(_, data) => setCompareBranch(data.value)}>
+                  <UnderlineSelect
+                    value={compareBranch}
+                    onChange={(_, data) => {
+                      setCompareFile(null);
+                      setCompareBranch(data.value);
+                    }}
+                  >
                     {local.map((entry) => (
                       <option key={entry.name} value={entry.name}>
                         {entry.name}
@@ -1123,14 +1153,101 @@ export function BranchesView({ tab }: BranchesViewProps) {
                       ))}
                     </div>
                   </div>
+                  <div className="compare-files">
+                    <div className="compare-files-title">變更檔案</div>
+                    {compareQuery.data.files.length === 0 ? <div className="empty-state">沒有變更檔案</div> : null}
+                    {compareQuery.data.files.map((file) => (
+                      <button
+                        key={file.path}
+                        type="button"
+                        className="compare-file"
+                        onClick={() => {
+                          setCompareFile(file);
+                          setCompareMaximized(true);
+                        }}
+                      >
+                        <span className={`detail-file-status ${fileStatusClass(file.status)}`}>
+                          {fileStatusLabel(file.status)}
+                        </span>
+                        <span className="compare-file-path" title={file.path}>{file.path}</span>
+                      </button>
+                    ))}
+                  </div>
                 </>
               ) : null}
             </div>
             <div className="modal-footer">
-              <Button appearance="secondary" onClick={() => setCompareOpen(false)}>關閉</Button>
+              <Button appearance="secondary" onClick={closeCompare}>關閉</Button>
             </div>
           </div>
         </div>
+      ) : null}
+
+      {compareFile ? (
+        <FileDiffDialog
+          path={compareFile.path}
+          statusLabel={fileStatusLabel(compareFile.status)}
+          statusClass={fileStatusClass(compareFile.status)}
+          position={compareFileIndex >= 0 ? compareFileIndex + 1 : 0}
+          total={compareFiles.length}
+          splitDiff={compareSplit}
+          maximized={compareMaximized}
+          onPrevious={() => {
+            if (compareFileIndex > 0) setCompareFile(compareFiles[compareFileIndex - 1]);
+          }}
+          onNext={() => {
+            if (compareFileIndex >= 0 && compareFileIndex < compareFiles.length - 1) {
+              setCompareFile(compareFiles[compareFileIndex + 1]);
+            }
+          }}
+          onToggleSplit={() => setCompareSplit((value) => !value)}
+          onToggleMaximized={() => setCompareMaximized((value) => !value)}
+          onClose={() => setCompareFile(null)}
+          filesPanel={
+            <div className="detail-file-tree">
+              {compareFiles.map((file) => (
+                <button
+                  key={file.path}
+                  type="button"
+                  className={`detail-file${file.path === compareFile.path ? " active" : ""}`}
+                  title={file.path}
+                  onClick={() => setCompareFile(file)}
+                >
+                  <span className={`detail-file-status ${fileStatusClass(file.status)}`}>
+                    {fileStatusLabel(file.status)}
+                  </span>
+                  <span className={`tree-name ${fileStatusClass(file.status)}`}>{file.path}</span>
+                </button>
+              ))}
+            </div>
+          }
+          diffContent={
+            compareDiff.isLoading ? (
+              <div className="center-state"><Spinner label={t("common.loading")} /></div>
+            ) : compareDiff.data?.image ? (
+              <ImageDiff
+                mime={compareDiff.data.imageMime}
+                oldData={compareDiff.data.oldImage}
+                newData={compareDiff.data.newImage}
+              />
+            ) : compareDiff.data?.binary ? (
+              <div className="center-state"><p>{t("changes.binary")}</p></div>
+            ) : compareDiff.data ? (
+              <>
+                {compareDiff.data.truncated ? <div className="inline-warning">{t("changes.truncated")}</div> : null}
+                <DiffEditor
+                  oldValue={compareDiff.data.oldText}
+                  newValue={compareDiff.data.newText}
+                  language={compareDiff.data.language}
+                  dark={document.documentElement.dataset.theme === "dark"}
+                  renderSideBySide={compareSplit}
+                />
+              </>
+            ) : (
+              <div className="center-state"><p>{t("changes.selectFile")}</p></div>
+            )
+          }
+        />
       ) : null}
 
       {pendingCommand ? (

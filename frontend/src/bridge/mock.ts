@@ -438,8 +438,10 @@ export async function mockInvoke<T>(group: string, method: string, args: any[]):
           author: commit.author,
           date: commit.authorTime,
         })),
-        files: [],
+        files: [{ path: "src/app.ts", status: "M" }],
       } as BranchCompare as T;
+    case "BranchAPI.CompareDiff":
+      return diffFor(args[3], "compare") as T;
     case "BranchAPI.Worktrees":
       return [
         { path: repo.rootPath, head: repo.headOid, branch: repo.branch },

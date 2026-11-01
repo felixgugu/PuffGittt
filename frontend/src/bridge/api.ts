@@ -179,6 +179,8 @@ export const api = {
       invoke<CommandPreview>("BranchAPI", "Preview", root, request),
     compare: (root: string, base: string, compare: string) =>
       invoke<BranchCompare>("BranchAPI", "Compare", root, base, compare),
+    compareDiff: (root: string, base: string, compare: string, path: string) =>
+      invoke<DiffDocument>("BranchAPI", "CompareDiff", root, base, compare, path),
     worktrees: (root: string) => invoke<Worktree[]>("BranchAPI", "Worktrees", root),
     addWorktree: (root: string, path: string, branch: string, createBranch: boolean) =>
       invoke<OperationResult>("BranchAPI", "AddWorktree", root, path, branch, createBranch),

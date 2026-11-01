@@ -65,8 +65,8 @@ wails build
   history operations.
 - Branches: local and remote lists, create, switch, merge, rebase, rename, delete,
   set upstream, publish, checkout remote branch, delete remote branch and branch
-  comparison through right-click context menus, with merge/rebase direction labels
-  and Git command confirmation dialogs.
+  comparison with inline file diff through right-click context menus, with
+  merge/rebase direction labels and Git command confirmation dialogs.
 - Remote management: add remotes, edit fetch/push URLs and remove remotes.
 - Worktrees: list, add (optionally creating a branch), remove and prune.
 - Submodules: list, update one/all and sync URLs.

@@ -839,6 +839,10 @@ func (a *BranchAPI) Compare(root, base, compare string) (model.BranchCompare, er
 	return a.s.runnerWithSettings().CompareBranches(a.s.context(), root, base, compare)
 }
 
+func (a *BranchAPI) CompareDiff(root, base, compare, path string) (model.DiffDocument, error) {
+	return a.s.runnerWithSettings().CompareDiff(a.s.context(), root, base, compare, path)
+}
+
 func (a *BranchAPI) Worktrees(root string) ([]model.Worktree, error) {
 	return a.s.runnerWithSettings().Worktrees(a.s.context(), root)
 }

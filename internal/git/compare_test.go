@@ -2,6 +2,7 @@ package git
 
 import (
 	"context"
+	"strings"
 	"testing"
 )
 
@@ -39,5 +40,13 @@ func TestCompareBranches(t *testing.T) {
 	}
 	if !found {
 		t.Fatalf("files = %#v", compare.Files)
+	}
+
+	diff, err := runner.CompareDiff(ctx, dir, "main", "feature", "feature.txt")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(diff.NewText, "feature work") {
+		t.Fatalf("diff = %#v", diff)
 	}
 }
