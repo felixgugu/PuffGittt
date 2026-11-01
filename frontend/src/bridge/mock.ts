@@ -24,6 +24,7 @@ import type {
   Tag,
   UndoRecord,
   Worktree,
+  WorkspaceRepository,
 } from "../types";
 
 const now = () => new Date().toISOString();
@@ -182,6 +183,13 @@ const settings: Settings = {
   recent: [{ path: repo.rootPath, name: repo.name, lastOpened: now() }],
 };
 
+let workspaceRepos: WorkspaceRepository[] = [
+  { name: repo.name, path: repo.rootPath, branch: repo.branch || "main", changes: 3, kind: "project" },
+  { name: "OldProject", path: "C:\\Demo\\OldProject", branch: "develop", changes: 0, kind: "recent" },
+];
+
+const workspacePathKey = (value: string) => value.replace(/\\/g, "/").toLowerCase();
+
 function diffFor(path: string, side: string): DiffDocument {
   const oldText =
     path === "src/auth/login.ts"
@@ -231,10 +239,7 @@ export async function mockInvoke<T>(group: string, method: string, args: any[]):
     case "AppAPI.ListRecent":
       return settings.recent as T;
     case "AppAPI.ListWorkspaceRepositories":
-      return [
-        { name: repo.name, path: repo.rootPath, branch: repo.branch || "main", changes: 3, kind: "project" },
-        { name: "OldProject", path: "C:\\Demo\\OldProject", branch: "develop", changes: 0, kind: "recent" },
-      ] as T;
+      return workspaceRepos.map((entry) => ({ ...entry })) as T;
     case "AppAPI.PickFolder":
       return repo.rootPath as T;
     case "AppAPI.OpenRepository":
@@ -478,9 +483,20 @@ export async function mockInvoke<T>(group: string, method: string, args: any[]):
     case "AppAPI.WatchRepository":
     case "AppAPI.UnwatchRepository":
     case "AppAPI.RemoveWorkspaceRepository":
-      return undefined as T;
-    case "AppAPI.AddWorkspaceFolder":
+      workspaceRepos = workspaceRepos.filter(
+        (entry) => workspacePathKey(entry.path) !== workspacePathKey(args[0] as string),
+      );
+      return workspaceRepos.map((entry) => ({ ...entry })) as T;
+    case "AppAPI.AddWorkspaceFolder": {
+      const existing = workspaceRepos.find((entry) => workspacePathKey(entry.path) === workspacePathKey(repo.rootPath));
+      if (!existing) {
+        workspaceRepos = [
+          ...workspaceRepos,
+          { name: repo.name, path: repo.rootPath, branch: repo.branch || "main", changes: 0, kind: "workspace" },
+        ];
+      }
       return repo as Repository as T;
+    }
     case "App.SetTheme":
     case "App.MinimizeWindow":
     case "App.ToggleMaximizeWindow":

@@ -83,7 +83,7 @@ export const api = {
     addWorkspaceFolder: (path: string) =>
       invoke<Repository>("AppAPI", "AddWorkspaceFolder", path),
     removeWorkspaceRepository: (path: string) =>
-      invoke<void>("AppAPI", "RemoveWorkspaceRepository", path),
+      invoke<WorkspaceRepository[]>("AppAPI", "RemoveWorkspaceRepository", path),
   },
   window: {
     minimize: () => invokeMain<void>("MinimizeWindow"),

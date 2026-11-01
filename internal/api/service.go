@@ -277,7 +277,7 @@ func (a *AppAPI) AddWorkspaceFolder(path string) (model.Repository, error) {
 	return repo, nil
 }
 
-func (a *AppAPI) RemoveWorkspaceRepository(path string) error {
+func (a *AppAPI) RemoveWorkspaceRepository(path string) ([]model.WorkspaceRepository, error) {
 	settings := a.s.cfg.LoadSettings()
 	settings.WorkspaceFolders = withoutWorkspacePath(settings.WorkspaceFolders, path)
 	filtered := settings.Recent[:0]
@@ -290,7 +290,10 @@ func (a *AppAPI) RemoveWorkspaceRepository(path string) error {
 	if !hasWorkspacePath(settings.HiddenProjects, path) {
 		settings.HiddenProjects = append(settings.HiddenProjects, path)
 	}
-	return a.s.cfg.SaveSettings(settings)
+	if err := a.s.cfg.SaveSettings(settings); err != nil {
+		return nil, err
+	}
+	return a.ListWorkspaceRepositories(), nil
 }
 
 func workspacePathKey(path string) string {

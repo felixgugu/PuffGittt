@@ -244,7 +244,11 @@ export default function App() {
 
   const handleRemoveProjectRepository = async (repo: WorkspaceRepository) => {
     try {
-      await api.app.removeWorkspaceRepository(repo.path);
+      const repositories = await api.app.removeWorkspaceRepository(repo.path);
+      queryClient.setQueriesData<WorkspaceRepository[]>(
+        { queryKey: ["workspaceRepositories"] },
+        repositories,
+      );
       void queryClient.invalidateQueries({ queryKey: ["workspaceRepositories"] });
       setStatusMessage(`已從專案清單移除 ${repo.name}`);
     } catch (error: any) {

@@ -54,8 +54,12 @@ func TestWorkspaceFolderAddRemove(t *testing.T) {
 		t.Fatalf("initial workspace = %#v", list)
 	}
 
-	if err := appAPI.RemoveWorkspaceRepository(alpha); err != nil {
+	remaining, err := appAPI.RemoveWorkspaceRepository(alpha)
+	if err != nil {
 		t.Fatal(err)
+	}
+	if len(remaining) != 1 || remaining[0].Name != "beta" {
+		t.Fatalf("remove returned = %#v", remaining)
 	}
 	list = appAPI.ListWorkspaceRepositories()
 	if len(list) != 1 || list[0].Name != "beta" {
