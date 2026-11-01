@@ -76,7 +76,8 @@ wails build
 - Conflicts: conflict list, three-way content, editable result, one-click ours/theirs/both,
   mark resolved, continue / skip / abort for in-progress operations.
 - Stashes: list, create, apply, pop, drop, diff preview.
-- Tags: list, create lightweight/annotated tags, delete tags, push a tag and push all tags.
+- Tags: local/remote tag lists, create lightweight/annotated/signed tags, delete
+  local and remote tags, push a tag and push all tags.
 - Settings: theme, language, base font size and family, projects folder,
   Git executable path, commit identity, and About/environment versions.
 - Frameless window with an integrated title bar; collapsible/resizable sidebar with
@@ -96,7 +97,6 @@ Highlights:
 
 - Git LFS.
 - SSH host-key UI and credential prompts.
-- Remote tag management and signed tags.
 - Terminal/ConPTY, Git Flow, provider integrations and custom actions.
 - High-contrast theme.
 - Backup retention and backup browser, diagnostics export, installer, code signing and updater.

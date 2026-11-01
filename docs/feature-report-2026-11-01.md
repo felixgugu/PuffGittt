@@ -25,13 +25,13 @@ PuffGittt 目前已經從「可用的 Git 前端」進展到可以支撐日常�
 1. **備份安全網**：Discard 備份、未追蹤檔案、backup retention policy。
 2. **遠端認證**：SSH host-key、credential prompt、連線測試。
 3. **衝突編輯**：hunk-level conflict resolution、ours/theirs/both 進階操作。
-4. **完整生態功能**：Git LFS、remote tags、signed commits、Git Flow、provider 整合。
+4. **完整生態功能**：Git LFS、signed commits、Git Flow、provider 整合。
 5. **大規模專案體驗**：跨頁 graph、效能、無障礙與高對比。
 
 **最值得優先投入的方向：**
 
 1. SSH / credential 流程。
-2. Remote tag 管理與 Git LFS。
+2. Git LFS。
 3. Discard 備份與 backup retention。
 4. Hunk-level conflict resolution。
 
@@ -127,8 +127,8 @@ PuffGittt 目前已經從「可用的 Git 前端」進展到可以支撐日常�
 | Stash partial apply | 未實作 | 尚無逐檔 / 逐 hunk apply |
 | Tag list / create / delete | 完成 | lightweight / annotated |
 | Tag push / push all | 完成 | 使用第一個 remote |
-| Remote tag 管理 | 未實作 | 尚無遠端 tag 列表 / 刪除 |
-| Signed tags | 未實作 | |
+| Remote tag 管理 | 完成 | 列表、local / remote 比對、刪除遠端 tag |
+| Signed tags | 完成 | 建立 signed tag，GPG / SSH signing 錯誤會回傳 UI |
 
 ### 2.6 Repository 工具
 
@@ -177,7 +177,7 @@ PuffGittt 目前已經從「可用的 Git 前端」進展到可以支撐日常�
 | Force-with-lease | 有 | 有 | 有 | - |
 | Credential / SSH UI | 有 | 有 | 無 | P0 |
 | Tags local | 有 | 有 | 有 | - |
-| Remote tags / signed tags | 有 | 有 | 部分 / 無 | P1 |
+| Remote tags / signed tags | 有 | 有 | 有 | - |
 | Stashes | 有 | 有 | 部分 | P2 |
 | Submodules | 有 | 有 | 部分 | P1 |
 | Worktrees | 有 | 部分 | 有 | - |
@@ -333,27 +333,39 @@ PuffGittt 目前已經從「可用的 Git 前端」進展到可以支撐日常�
 
 ### P1-2：Remote tags 與 signed tags
 
-**現況**
+**狀態：已實作**
 
-- 可建立 / 刪除 local tag。
-- 可 push 單一 tag 或全部 tags。
-- 沒有遠端 tag 列表、遠端刪除、signed tag。
+**已完成**
 
-**建議範圍**
+- Tags 頁面新增「本機 / 遠端」分頁。
+- 遠端 tags 使用 `git ls-remote --tags` 讀取。
+- 顯示同步狀態：
+  - 同步
+  - 不同步
+  - 僅遠端
+  - 僅本機
+- 可從遠端列表刪除 tag：
+  - `git push <remote> --delete refs/tags/<tag>`
+  - destructive 指令預覽與警告
+- 建立 signed tag：
+  - `git tag -s <name> -m <message>`
+  - GPG / SSH signing 錯誤會顯示在 UI
+- Tag 詳情包含 annotated message、tagger、tagger date 與 target commit。
 
-- `git ls-remote --tags` 列表與比對 local / remote。
-- 刪除 remote tag：`git push <remote> --delete <tag>`。
-- Signed tag：`git tag -s`，需要 GPG 設定。
-- Tag 詳情：annotated message、tagger、target commit。
+**限制**
 
-**驗收條件**
+- 一次只使用第一個 remote。
+- 尚未顯示 tag signature 驗證結果。
+- 遠端 tag 列表需要網路，失敗時顯示空狀態。
+- 尚未支援刪除多個遠端 tags。
 
-- 可看到 remote-only / local-only / 同步狀態。
+**驗收結果**
+
+- 可看到 remote-only / local-only / synced / diverged 狀態。
 - 刪除 remote tag 有指令預覽與 destructive 警告。
-- Signed tag 在沒有 GPG key 時顯示明確錯誤。
+- Signed tag 在沒有 signing key 時回傳明確 Git 錯誤。
 
-**成本**：Small–Medium  
-**風險**：Low–Medium
+**剩餘風險**：Low–Medium（網路、外部 signing 設定）
 
 ---
 
@@ -638,7 +650,7 @@ PuffGittt 目前已經從「可用的 Git 前端」進展到可以支撐日常�
 
 1. Credential prompt。
 2. SSH host-key 驗證。
-3. Remote tag 管理與 signed tags。
+3. Remote tag 管理與 signed tags（已完成）。
 4. Git LFS。
 5. Submodule add / remove。
 
@@ -769,13 +781,13 @@ PuffGittt 已經具備一套完整的日常 Git 工作流，與 SmartGit / Sourc
 1. **備份安全網**：Discard 備份、未追蹤檔案、backup retention。
 2. **遠端認證**：credential、SSH host-key。
 3. **衝突編輯**：hunk-level conflict resolution。
-4. **生態功能**：LFS、remote tags、signed commits、Git Flow、providers。
+4. **生態功能**：LFS、signed commits、Git Flow、providers。
 5. **大規模體驗**：graph 跨頁、效能、無障礙。
 
 若只能選三個下一步，建議順序是：
 
 1. **Credential / SSH 流程**
-2. **Remote tags / Git LFS**
+2. **Git LFS**
 3. **Hunk-level conflict resolution**
 
 這三項完成後，PuffGittt 在「真實世界可用性」與「協作功能」會明顯接近 SmartGit / SourceTree，之後再投入 LFS、history UX 與 backup 保留策略，會比較穩定。

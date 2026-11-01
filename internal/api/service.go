@@ -1015,6 +1015,28 @@ func (a *TagAPI) PushAll(root, remote string) (model.OperationResult, error) {
 	return a.s.runnerWithSettings().PushAllTags(a.s.context(), root, remote)
 }
 
+func (a *TagAPI) CreateSigned(root, name, oid, message string) (model.OperationResult, error) {
+	mu := a.s.repoLock(root)
+	mu.Lock()
+	defer mu.Unlock()
+	return a.s.runnerWithSettings().CreateSignedTag(a.s.context(), root, name, oid, message)
+}
+
+func (a *TagAPI) ListRemote(root, remote string) ([]git.RemoteTag, error) {
+	return runTask(a.s, root, "List remote tags", true, func(ctx context.Context) ([]git.RemoteTag, error) {
+		return a.s.runnerWithSettings().RemoteTags(ctx, root, remote)
+	})
+}
+
+func (a *TagAPI) DeleteRemote(root, remote, name string) (model.OperationResult, error) {
+	return runTask(a.s, root, "Delete remote tag "+strings.TrimSpace(name), true, func(ctx context.Context) (model.OperationResult, error) {
+		mu := a.s.repoLock(root)
+		mu.Lock()
+		defer mu.Unlock()
+		return a.s.runnerWithSettings().DeleteRemoteTag(ctx, root, remote, name)
+	})
+}
+
 func (a *TaskAPI) List() []task.Task {
 	return a.s.tasks.List()
 }

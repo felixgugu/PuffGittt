@@ -15,6 +15,7 @@ import type {
   OperationResult,
   RecentRepo,
   ReflogEntry,
+  RemoteTag,
   Repository,
   RebaseTodo,
   Settings,
@@ -500,8 +501,16 @@ export async function mockInvoke<T>(group: string, method: string, args: any[]):
     case "TagAPI.List":
       return [] as Tag[] as T;
     case "TagAPI.Create":
+    case "TagAPI.CreateSigned":
     case "TagAPI.Delete":
       return ok("Tag updated") as T;
+    case "TagAPI.ListRemote":
+      return [
+        { name: "v0.1.0", oid: "1111111111111111111111111111111111111111" },
+        { name: "v1.0.0", oid: "2222222222222222222222222222222222222222" },
+      ] as RemoteTag[] as T;
+    case "TagAPI.DeleteRemote":
+      return ok("Remote tag deleted") as T;
     case "TagAPI.Push":
     case "TagAPI.PushAll":
       return ok("Tag pushed") as T;

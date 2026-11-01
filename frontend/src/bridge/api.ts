@@ -18,6 +18,7 @@ import type {
   RecentRepo,
   ReflogEntry,
   Remote,
+  RemoteTag,
   Repository,
   RebaseTodo,
   Settings,
@@ -220,7 +221,13 @@ export const api = {
     list: (root: string) => invoke<Tag[]>("TagAPI", "List", root),
     create: (root: string, name: string, oid: string, message: string) =>
       invoke<OperationResult>("TagAPI", "Create", root, name, oid, message),
+    createSigned: (root: string, name: string, oid: string, message: string) =>
+      invoke<OperationResult>("TagAPI", "CreateSigned", root, name, oid, message),
     delete: (root: string, name: string) => invoke<OperationResult>("TagAPI", "Delete", root, name),
+    listRemote: (root: string, remote: string) =>
+      invoke<RemoteTag[]>("TagAPI", "ListRemote", root, remote),
+    deleteRemote: (root: string, remote: string, name: string) =>
+      invoke<OperationResult>("TagAPI", "DeleteRemote", root, remote, name),
     push: (root: string, remote: string, name: string) =>
       invoke<OperationResult>("TagAPI", "Push", root, remote, name),
     pushAll: (root: string, remote: string) => invoke<OperationResult>("TagAPI", "PushAll", root, remote),

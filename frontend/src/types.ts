@@ -206,7 +206,16 @@ export interface StashEntry {
 export interface Tag {
   name: string;
   oid: string;
+  targetOid?: string;
+  tagger?: string;
+  taggerDate?: string;
   message?: string;
+  annotated?: boolean;
+}
+
+export interface RemoteTag {
+  name: string;
+  oid: string;
 }
 
 export interface RecentRepo {

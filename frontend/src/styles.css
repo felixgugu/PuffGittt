@@ -2457,6 +2457,58 @@ svg {
   gap: 2px;
 }
 
+.tag-state {
+  flex: 0 0 auto;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--surface-muted);
+  color: var(--text-tertiary);
+  font-size: 0.6875rem;
+}
+
+.tag-state.synced {
+  background: var(--success-soft);
+  color: var(--success);
+}
+
+.tag-state.diverged {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+.tag-state.remote-only {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.tag-local-only {
+  padding: 8px 12px;
+}
+
+.tag-local-only-title {
+  padding-bottom: 4px;
+  color: var(--text-tertiary);
+  font-size: var(--font-size-secondary);
+  font-weight: 600;
+}
+
+.tag-local-only-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: var(--font-size-secondary);
+}
+
+.tag-local-only-row > span:first-child {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .stash-row {
   display: flex;
   align-items: center;

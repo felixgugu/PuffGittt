@@ -109,10 +109,11 @@ This file tracks the gap between the current PuffGittt build and
 - Stash list, create, apply, pop, drop and diff preview.
 
 ### Tags
-- Tag list.
-- Create lightweight tags.
-- Create annotated tags with optional commit target.
+- Tag list with annotated message, tagger, date and target commit.
+- Local / remote tag tabs with synced, diverged, remote-only and local-only states.
+- Create lightweight, annotated and signed tags.
 - Delete local tags with Git command confirmation.
+- Delete remote tags with command preview and destructive warning.
 - Push a single tag or all tags to the first configured remote.
 - Create tags directly from a History commit.
 
@@ -142,8 +143,8 @@ This file tracks the gap between the current PuffGittt build and
   snapshot implementation described in the spec.
 - **Search**: commit message, author/email, SHA prefix and path search are
   supported; path matching is literal (file or directory), not fuzzy.
-- **Tags**: local list/create/delete, single-tag push and push-all. No remote tag
-  deletion, remote tag listing or signed tags yet.
+- **Tags**: local and remote tag lists, local/remote status comparison, local and
+  remote deletion, signed tags. Signature verification is not exposed.
 - **Remotes**: remote add/edit/delete UI exists; credential prompts and SSH host-key
   verification are still missing.
 - **Settings identity**: used for commits via `git -c`, not written to repo config.
