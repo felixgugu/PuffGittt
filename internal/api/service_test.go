@@ -83,7 +83,7 @@ func TestFacadesAgainstRealRepository(t *testing.T) {
 	if _, err := commitAPI.Commit(dir, "second", false); err != nil {
 		t.Fatal(err)
 	}
-	commits, err := historyAPI.List(dir, "main", false, 10, "")
+	commits, err := historyAPI.List(dir, "main", false, 10, "", "message")
 	if err != nil {
 		t.Fatal(err)
 	}

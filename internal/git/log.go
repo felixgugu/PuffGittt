@@ -2,6 +2,7 @@ package git
 
 import (
 	"context"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -9,6 +10,10 @@ import (
 )
 
 func (r *Runner) Log(ctx context.Context, root, branch string, all bool, limit int, search string) ([]model.Commit, error) {
+	return r.LogSearch(ctx, root, branch, all, limit, search, "message")
+}
+
+func (r *Runner) LogSearch(ctx context.Context, root, branch string, all bool, limit int, search, mode string) ([]model.Commit, error) {
 	repo, err := r.Open(ctx, root)
 	if err != nil {
 		return nil, err
@@ -16,18 +21,42 @@ func (r *Runner) Log(ctx context.Context, root, branch string, all bool, limit i
 	if limit <= 0 || limit > 1000 {
 		limit = 200
 	}
+	query := strings.TrimSpace(search)
+	if mode == "sha" && query != "" {
+		lower := strings.ToLower(query)
+		if len(lower) < 4 || !isHex(lower) {
+			return []model.Commit{}, nil
+		}
+		out, _, err := r.RunBytes(ctx, repo.RootPath, nil, "rev-parse", "--verify", "--quiet", query+"^{commit}")
+		if err != nil {
+			return []model.Commit{}, nil
+		}
+		return r.LogSearch(ctx, root, strings.TrimSpace(out), false, 1, "", "message")
+	}
+
 	args := []string{
-		"log", "--topo-order", "--date=iso-strict",
+		"--literal-pathspecs", "log", "--topo-order", "--date=iso-strict",
 		"--pretty=format:%H%x1f%P%x1f%an%x1f%ae%x1f%aI%x1f%cn%x1f%ce%x1f%cI%x1f%s%x1f%D%x1e",
 		"--max-count=" + strconv.Itoa(limit),
 	}
-	if strings.TrimSpace(search) != "" {
-		args = append(args, "--regexp-ignore-case", "--fixed-strings", "--grep="+search)
+	pathFilter := ""
+	if query != "" {
+		switch mode {
+		case "author":
+			args = append(args, "--regexp-ignore-case", "--author="+regexp.QuoteMeta(query))
+		case "path":
+			pathFilter = strings.ReplaceAll(query, "\\", "/")
+		default:
+			args = append(args, "--regexp-ignore-case", "--fixed-strings", "--grep="+query)
+		}
 	}
 	if all {
 		args = append(args, "--all")
 	} else if strings.TrimSpace(branch) != "" {
 		args = append(args, branch)
+	}
+	if pathFilter != "" {
+		args = append(args, "--", pathFilter)
 	}
 	out, errOut, err := r.RunBytes(ctx, repo.RootPath, nil, args...)
 	if err != nil {

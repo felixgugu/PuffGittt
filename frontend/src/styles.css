@@ -1649,6 +1649,11 @@ svg {
   max-width: 280px;
 }
 
+.history-search-mode.form-control {
+  flex: 0 0 88px;
+  width: 88px;
+}
+
 .history-branch-select.form-control {
   flex: 0 0 170px;
   width: 170px;

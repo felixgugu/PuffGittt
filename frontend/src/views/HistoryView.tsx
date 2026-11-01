@@ -46,6 +46,7 @@ interface HistoryViewProps {
 
 type FileViewMode = "tree" | "flat";
 type HistoryMode = "commits" | "reflog";
+type SearchMode = "message" | "author" | "sha" | "path";
 
 interface PendingCommitAction {
   title: string;
@@ -68,6 +69,7 @@ export function HistoryView({ tab }: HistoryViewProps) {
   const [selectedReflog, setSelectedReflog] = useState<string | null>(null);
   const [undoDialogOpen, setUndoDialogOpen] = useState(false);
   const [search, setSearch] = useState("");
+  const [searchMode, setSearchMode] = useState<SearchMode>("message");
   const deferredSearch = useDeferredValue(search);
   const [selectedFile, setSelectedFile] = useState<string | null>(null);
   const [dialogFile, setDialogFile] = useState<CommitFile | null>(null);
@@ -109,8 +111,8 @@ export function HistoryView({ tab }: HistoryViewProps) {
     queryFn: () => api.repo.getBranches(root),
   });
   const history = useQuery({
-    queryKey: ["history", root, branch, allBranches, deferredSearch],
-    queryFn: () => api.history.list(root, branch, allBranches, 200, deferredSearch),
+    queryKey: ["history", root, branch, allBranches, deferredSearch, searchMode],
+    queryFn: () => api.history.list(root, branch, allBranches, 200, deferredSearch, searchMode),
   });
   const commits = history.data || [];
   const graph = useMemo(() => buildGraph(commits), [commits]);
@@ -124,6 +126,7 @@ export function HistoryView({ tab }: HistoryViewProps) {
 
   useEffect(() => {
     setSearch("");
+    setSearchMode("message");
   }, [root]);
 
   useEffect(() => {
@@ -523,11 +526,30 @@ export function HistoryView({ tab }: HistoryViewProps) {
               <div className="history-heading-tools">
                 {historyMode === "commits" ? (
                   <>
+                    <UnderlineSelect
+                      className="history-search-mode"
+                      aria-label="搜尋模式"
+                      value={searchMode}
+                      onChange={(_, data) => setSearchMode(data.value as SearchMode)}
+                    >
+                      <option value="message">訊息</option>
+                      <option value="author">作者</option>
+                      <option value="sha">SHA</option>
+                      <option value="path">路徑</option>
+                    </UnderlineSelect>
                     <UnderlineInput
                       value={search}
                       onChange={(_, data) => setSearch(data.value)}
                       contentBefore={<Search24Regular />}
-                      placeholder="搜尋 Commit、作者或 SHA"
+                      placeholder={
+                        searchMode === "author"
+                          ? "搜尋作者姓名或 Email"
+                          : searchMode === "sha"
+                            ? "輸入 SHA 前綴"
+                            : searchMode === "path"
+                              ? "輸入檔案或目錄路徑"
+                              : "搜尋 Commit 訊息"
+                      }
                       className="history-search"
                     />
                     <UnderlineSelect

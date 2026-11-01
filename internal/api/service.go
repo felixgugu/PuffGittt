@@ -447,8 +447,8 @@ func (a *CommitAPI) Commit(root, message string, amend bool) (model.OperationRes
 		a.s.context(), root, message, amend, settings.AuthorName, settings.AuthorEmail)
 }
 
-func (a *HistoryAPI) List(root, branch string, all bool, limit int, search string) ([]model.Commit, error) {
-	return a.s.runnerWithSettings().Log(a.s.context(), root, branch, all, limit, search)
+func (a *HistoryAPI) List(root, branch string, all bool, limit int, search, mode string) ([]model.Commit, error) {
+	return a.s.runnerWithSettings().LogSearch(a.s.context(), root, branch, all, limit, search, mode)
 }
 
 func (a *HistoryAPI) GetCommit(root, oid string) (model.CommitDetail, error) {

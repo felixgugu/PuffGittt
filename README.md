@@ -53,7 +53,8 @@ wails build
   commit history and line-by-line blame.
 - Image diff for common raster formats and SVG, with side-by-side old/new previews.
 - Commit message drafts are persisted per repository in local storage.
-- History: branch filter, commit search, virtualized commit list, SVG lane graph,
+- History: branch/all-branches filter, commit search by message / author / SHA
+  prefix / path, virtualized commit list, SVG lane graph,
   resizable commit details/changed files, tree/flat changed-file modes, commit diff
   dialog, create branch/tag, copy OID, reset, revert, drop commit, cherry-pick
   (including merge mainline selection), interactive rebase and bisect, all through

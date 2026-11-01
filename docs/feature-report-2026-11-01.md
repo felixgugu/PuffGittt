@@ -27,7 +27,7 @@ PuffGittt 目前已經從「可用的 Git 前端」進展到可以支撐日常�
 3. **遠端認證**：SSH host-key、credential prompt、連線測試。
 4. **進階歷史編輯**：Interactive Rebase 的 reorder / reword / skip。
 5. **完整生態功能**：Git LFS、remote tags、signed commits、Git Flow、provider 整合。
-6. **大規模專案體驗**：跨頁 graph、效能、搜尋欄位、無障礙與高對比。
+6. **大規模專案體驗**：跨頁 graph、效能、無障礙與高對比。
 
 **最值得優先投入的方向：**
 
@@ -78,7 +78,7 @@ PuffGittt 目前已經從「可用的 Git 前端」進展到可以支撐日常�
 |---|---|---|
 | Commit list / graph | 部分 | 自製 SVG lane graph，單頁 200 commits |
 | Branch filter / all branches | 完成 | |
-| Commit 搜尋 | 部分 | 只搜尋 commit message，尚未支援 author / SHA / path |
+| Commit 搜尋 | 完成 | 訊息 / 作者 / SHA 前綴 / 路徑（完整路徑） |
 | Commit 詳細資料 | 完成 | 可拖曳調整高度 |
 | Changed files tree / flat | 完成 | |
 | Diff Dialog | 完成 | 上一個 / 下一個、單欄 / 並排、最大化 |
@@ -95,7 +95,6 @@ PuffGittt 目前已經從「可用的 Git 前端」進展到可以支撐日常�
 | File History | 部分 | Dialog 呈現，尚無獨立 workspace |
 | Blame | 部分 | 逐行顯示，尚無 range / 作者統計 |
 | 跨頁 graph frontier | 未實作 | 換頁時 lane 狀態未完整延續 |
-| Search author / SHA / path | 未實作 | 後端只使用 `--grep` |
 
 ### 2.4 Branches / Sync
 
@@ -163,7 +162,7 @@ PuffGittt 目前已經從「可用的 Git 前端」進展到可以支撐日常�
 | Partial commit | 有 | 有 | 有 | - |
 | Monaco gutter staging | 有 | 有 | 無 | P2 |
 | Commit graph | 有 | 有 | 部分 | P2 |
-| Commit 搜尋 author / SHA / path | 有 | 有 | 無 | P1 |
+| Commit 搜尋 author / SHA / path | 有 | 有 | 有 | - |
 | Interactive rebase | 有 | 有 | 部分 | P1 |
 | Cherry-pick | 有 | 有 | 有 | - |
 | Reset / Revert / Drop | 有 | 有 | 有 | - |
@@ -420,26 +419,16 @@ PuffGittt 目前已經從「可用的 Git 前端」進展到可以支撐日常�
 
 ### P1-5：Commit 搜尋補完
 
-**現況**
+**狀態：已實作**
 
-- 只使用 `git log --grep` 搜尋 message。
-- Placeholder 顯示「搜尋 Commit、作者或 SHA」，但後端尚未支援 author / SHA / path。
+- 搜尋模式：訊息 / 作者 / SHA 前綴 / 路徑。
+- 路徑採 literal path（檔案或目錄），不是模糊比對。
 
-**建議範圍**
+**後續可加強**
 
-- Author / committer 搜尋。
-- SHA 前綴搜尋。
-- Path 搜尋（`-- <path>`）。
-- 搜尋結果 Highlight。
-- 區分 message / author / path 模式。
-
-**驗收條件**
-
-- 三種搜尋都能回傳正確結果。
-- 空結果與錯誤狀態有清楚提示。
-
-**成本**：Small  
-**風險**：Low
+- 搜尋結果 highlight。
+- 模糊 path / glob。
+- 複合條件（作者 + 路徑 + 日期）。
 
 ---
 
@@ -642,7 +631,7 @@ PuffGittt 目前已經從「可用的 Git 前端」進展到可以支撐日常�
 1. Background task queue、進度、取消。
 2. Multi-step Undo 與 destructive operation backup。
 3. fsnotify watcher + debounce（polling fallback）。
-4. Commit 搜尋補完（author / SHA / path）。
+4. Commit 搜尋補完（已完成：message / author / SHA / path）。
 
 **完成後效果**
 
@@ -787,7 +776,7 @@ PuffGittt 已經具備一套完整的日常 Git 工作流，與 SmartGit / Sourc
 2. **遠端認證**：credential、SSH host-key。
 3. **進階歷史編輯**：rebase reorder / reword / skip、conflict hunk。
 4. **生態功能**：LFS、remote tags、signed commits、Git Flow、providers。
-5. **大規模體驗**：graph 跨頁、搜尋、效能、無障礙。
+5. **大規模體驗**：graph 跨頁、效能、無障礙。
 
 若只能選三個下一步，建議順序是：
 

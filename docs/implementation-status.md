@@ -132,7 +132,8 @@ This file tracks the gap between the current PuffGittt build and
   listed, but there is no inline file diff from the compare dialog yet.
 - **Commit graph**: functional lane algorithm but not the full frontier/cross-page
   snapshot implementation described in the spec.
-- **Search**: commit subject search only; author/SHA/path search not complete.
+- **Search**: commit message, author/email, SHA prefix and path search are
+  supported; path matching is literal (file or directory), not fuzzy.
 - **Tags**: local list/create/delete, single-tag push and push-all. No remote tag
   deletion, remote tag listing or signed tags yet.
 - **Remotes**: remote add/edit/delete UI exists; credential prompts and SSH host-key

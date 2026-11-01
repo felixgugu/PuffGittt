@@ -114,8 +114,8 @@ export const api = {
       invoke<OperationResult>("CommitAPI", "Commit", root, message, amend),
   },
   history: {
-    list: (root: string, branch: string, all: boolean, limit: number, search: string) =>
-      invoke<Commit[]>("HistoryAPI", "List", root, branch, all, limit, search),
+    list: (root: string, branch: string, all: boolean, limit: number, search: string, mode: string) =>
+      invoke<Commit[]>("HistoryAPI", "List", root, branch, all, limit, search, mode),
     getCommit: (root: string, oid: string) => invoke<CommitDetail>("HistoryAPI", "GetCommit", root, oid),
     preview: (root: string, request: CommandRequest) =>
       invoke<CommandPreview>("HistoryAPI", "Preview", root, request),

@@ -40,7 +40,7 @@ func TestResetUndoAndReflog(t *testing.T) {
 	service.SetContext(context.Background())
 	historyAPI := NewHistoryAPI(service)
 
-	commits, err := historyAPI.List(dir, "main", false, 10, "")
+	commits, err := historyAPI.List(dir, "main", false, 10, "", "message")
 	if err != nil {
 		t.Fatal(err)
 	}
