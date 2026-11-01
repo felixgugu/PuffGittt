@@ -126,7 +126,28 @@ export function BranchesView({ tab }: BranchesViewProps) {
       invalidate();
       return true;
     } catch (error: any) {
-      setStatusMessage(error?.message || String(error));
+      const message = error?.message || String(error);
+      const lower = message.toLowerCase();
+      const hostKeyIssue =
+        lower.includes("host key verification failed") ||
+        lower.includes("remote host identification has changed") ||
+        lower.includes("no rsa host key is known") ||
+        lower.includes("no ed25519 host key is known");
+      const authIssue =
+        lower.includes("authentication failed") ||
+        lower.includes("could not read username") ||
+        lower.includes("could not read password") ||
+        lower.includes("terminal prompts disabled") ||
+        lower.includes("permission denied (publickey") ||
+        lower.includes("returned error: 401") ||
+        lower.includes("returned error: 403");
+      if (hostKeyIssue) {
+        setStatusMessage(`${message}\n請到 Settings → 遠端認證 掃描並信任 SSH host key。`);
+      } else if (authIssue) {
+        setStatusMessage(`${message}\n請到 Settings → 遠端認證 設定 Personal Access Token 或 SSH key。`);
+      } else {
+        setStatusMessage(message);
+      }
       return false;
     } finally {
       setBusy(null);

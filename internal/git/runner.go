@@ -7,12 +7,14 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"time"
 )
 
 type Runner struct {
-	GitPath string
+	GitPath        string
+	CredentialFile string
 }
 
 func NewRunner() *Runner {
@@ -27,7 +29,11 @@ func (r *Runner) WithPath(path string) *Runner {
 	if strings.TrimSpace(path) == "" {
 		return r
 	}
-	return &Runner{GitPath: path}
+	return &Runner{GitPath: path, CredentialFile: r.CredentialFile}
+}
+
+func (r *Runner) WithCredentialFile(path string) *Runner {
+	return &Runner{GitPath: r.GitPath, CredentialFile: path}
 }
 
 type CommandError struct {
@@ -55,7 +61,12 @@ func (r *Runner) command(ctx context.Context, dir string, args ...string) *exec.
 	if ctx == nil {
 		ctx = context.Background()
 	}
-	cmd := exec.CommandContext(ctx, r.GitPath, args...)
+	commandArgs := args
+	if r.CredentialFile != "" {
+		helper := "store --file=\"" + filepath.ToSlash(r.CredentialFile) + "\""
+		commandArgs = append([]string{"-c", "credential.helper=" + helper}, args...)
+	}
+	cmd := exec.CommandContext(ctx, r.GitPath, commandArgs...)
 	if dir != "" {
 		cmd.Dir = dir
 	}

@@ -94,6 +94,9 @@ This file tracks the gap between the current PuffGittt build and
   publish, force push and delete.
 - Right-click remote branch context menu for checkout and remote deletion.
 - Remote management: add, edit URL and remove remotes.
+- Remote authentication: HTTPS PAT validation and storage via the system
+  credential helper, credential removal, SSH host-key scan / fingerprint display
+  / `known_hosts` trust, SSH key and agent status, and auth hints on sync errors.
 - Branch comparison dialog with ahead/behind counts, unique commits, changed files
   and inline file diff.
 - Worktree dialog: list, add, remove and prune.
@@ -147,8 +150,11 @@ This file tracks the gap between the current PuffGittt build and
   supported; path matching is literal (file or directory), not fuzzy.
 - **Tags**: local and remote tag lists, local/remote status comparison, local and
   remote deletion, signed tags. Signature verification is not exposed.
-- **Remotes**: remote add/edit/delete UI exists; credential prompts and SSH host-key
-  verification are still missing.
+- **Remotes**: remote add/edit/delete UI and remote authentication (HTTPS PAT,
+  SSH host-key trust) exist.
+- **Remote auth**: HTTPS PATs and SSH host keys are supported; GitHub OAuth device
+  flow is not implemented, and stored credentials are delegated to the configured
+  Git credential helper rather than an app-owned vault.
 - **Settings identity**: used for commits via `git -c`, not written to repo config.
 - **Git LFS**: detects `git lfs`, shows patterns and files, supports track /
   untrack / pull / push. Stage-time LFS hints and nested `.gitattributes` are not
@@ -189,7 +195,6 @@ This file tracks the gap between the current PuffGittt build and
 - Submodules are list/update/sync only; adding, removing or editing `.gitmodules`
   is not exposed.
 - Embedded terminal / ConPTY.
-- Credential prompts and SSH host-key verification.
 - Backup retention and restore UI.
 - High-contrast theme.
 - Diagnostics export, updater, installer, code signing and CI packaging.

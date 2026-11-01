@@ -260,6 +260,47 @@ export interface LFSStatus {
   patterns: string[];
 }
 
+export interface RemoteAuthStatus {
+  remote: string;
+  url: string;
+  protocol: string;
+  host: string;
+  username?: string;
+  hasCredential: boolean;
+  credentialHelper?: string;
+  sshKeyFound: boolean;
+  hostKeyKnown: boolean;
+}
+
+export interface RemoteTestResult {
+  ok: boolean;
+  message: string;
+  authRequired: boolean;
+  hostKeyRequired: boolean;
+  host?: string;
+  protocol?: string;
+}
+
+export interface SSHHostKey {
+  host: string;
+  algorithm: string;
+  fingerprint: string;
+  key: string;
+}
+
+export interface SSHKeyInfo {
+  path: string;
+  type: string;
+  hasPublic: boolean;
+}
+
+export interface SSHKeyList {
+  keys: SSHKeyInfo[];
+  agentRunning: boolean;
+  agentKeys: number;
+  knownHosts: string;
+}
+
 export interface OperationResult {
   success: boolean;
   message: string;

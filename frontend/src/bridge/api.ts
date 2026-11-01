@@ -19,10 +19,14 @@ import type {
   RecentRepo,
   ReflogEntry,
   Remote,
+  RemoteAuthStatus,
   RemoteTag,
+  RemoteTestResult,
   Repository,
   RebaseTodo,
   Settings,
+  SSHHostKey,
+  SSHKeyList,
   StashEntry,
   Status,
   Submodule,
@@ -207,6 +211,21 @@ export const api = {
       invoke<OperationResult>("SyncAPI", "RemoveRemote", root, name),
     preview: (root: string, request: CommandRequest) =>
       invoke<CommandPreview>("SyncAPI", "Preview", root, request),
+  },
+  remoteAuth: {
+    status: (root: string, remote: string) =>
+      invoke<RemoteAuthStatus>("RemoteAuthAPI", "Status", root, remote),
+    test: (root: string, remote: string) =>
+      invoke<RemoteTestResult>("RemoteAuthAPI", "Test", root, remote),
+    save: (root: string, remote: string, username: string, password: string, remember: boolean) =>
+      invoke<RemoteTestResult>("RemoteAuthAPI", "Save", root, remote, username, password, remember),
+    forget: (root: string, remote: string) =>
+      invoke<OperationResult>("RemoteAuthAPI", "Forget", root, remote),
+    sshKeys: () => invoke<SSHKeyList>("RemoteAuthAPI", "SSHKeys"),
+    sshHostKeys: (host: string) =>
+      invoke<SSHHostKey[]>("RemoteAuthAPI", "SSHHostKeys", host),
+    trustHost: (key: string) =>
+      invoke<OperationResult>("RemoteAuthAPI", "TrustHost", key),
   },
   conflict: {
     list: (root: string) => invoke<ConflictFile[]>("ConflictAPI", "List", root),

@@ -68,6 +68,9 @@ wails build
   comparison with inline file diff through right-click context menus, with
   merge/rebase direction labels and Git command confirmation dialogs.
 - Remote management: add remotes, edit fetch/push URLs and remove remotes.
+- Remote authentication: HTTPS Personal Access Token entry (validated and stored
+  through the system credential helper), credential removal, SSH host-key scanning
+  with fingerprints and `known_hosts` trust, plus SSH key / agent status.
 - Worktrees: list, add (optionally creating a branch), remove and prune.
 - Submodules: list, update one/all and sync URLs.
 - Sync: fetch, pull, push, force-with-lease push, with Git command previews and

@@ -15,17 +15,16 @@ PuffGittt 已具備完整的日常 Git 工作流：Changes、History、Branches�
 
 目前主要缺口：
 
-1. **遠端認證**：credential prompt、SSH host-key。
-2. **安全網完整度**：Discard / untracked 備份、backup retention。
-3. **進階編輯**：Submodule CRUD、Stash partial apply、Monaco gutter staging、hunk-level conflict。
-4. **生態與發佈**：signed commits、custom actions、Git Flow、provider、installer / updater。
-5. **大型 repo 體驗**：跨頁 graph、效能 benchmark、無障礙。
+1. **安全網完整度**：Discard / untracked 備份、backup retention。
+2. **進階編輯**：Submodule CRUD、Stash partial apply、Monaco gutter staging、hunk-level conflict。
+3. **生態與發佈**：signed commits、custom actions、Git Flow、provider、installer / updater。
+4. **大型 repo 體驗**：跨頁 graph、效能 benchmark、無障礙。
 
 最值得優先投入：
 
-1. Credential / SSH 流程。
-2. Discard 備份與 backup retention。
-3. Submodule CRUD 或 hunk-level conflict resolution。
+1. Discard 備份與 backup retention。
+2. Submodule CRUD 或 hunk-level conflict resolution。
+3. 大型 repo benchmark。
 
 ---
 
@@ -48,7 +47,7 @@ PuffGittt 已具備完整的日常 Git 工作流：Changes、History、Branches�
 | Git LFS | 完成 | 偵測、patterns、files、track/untrack、pull/push |
 | Task queue | 部分 | 長操作 queue、進度、取消；無 Job Object / 全域 runner |
 | Watcher | 完成 | fsnotify + debounce + fingerprint + polling fallback |
-| Settings | 部分 | 主題、語言、字型、Git path、identity、LFS；無高對比 |
+| Settings | 部分 | 主題、語言、字型、Git path、identity、LFS、遠端認證；無高對比 |
 | Search | 完成 | Message / author / SHA 前綴 / path |
 | Packaging | 未完成 | 只有 exe；無 installer / signing / updater |
 
@@ -79,7 +78,7 @@ PuffGittt 已具備完整的日常 Git 工作流：Changes、History、Branches�
 | Branch compare | 有 | 有 | 有 | - |
 | Remote management | 有 | 有 | 有 | - |
 | Force-with-lease | 有 | 有 | 有 | - |
-| Credential / SSH UI | 有 | 有 | 無 | P0 |
+| Credential / SSH UI | 有 | 有 | 有 | - |
 | Tags / signed tags | 有 | 有 | 有 | - |
 | Remote tags | 有 | 有 | 有 | - |
 | Stash diff / partial apply | 有 | 有 | 部分 | P1 |
@@ -103,7 +102,7 @@ PuffGittt 已具備完整的日常 Git 工作流：Changes、History、Branches�
 
 ### P0：可靠性與真實環境可用性
 
-- **Credential prompt 與 SSH host-key**：目前 `GIT_TERMINAL_PROMPT=0`，私有 repo / SSH 首次連線會直接失敗。
+- **Credential prompt 與 SSH host-key**：已完成。HTTPS 使用 PAT（stdin 傳遞、可存入系統 credential helper），SSH 可掃描 host key、顯示 fingerprint 並寫入 known_hosts。
 - **Discard / untracked 備份**：Undo 已涵蓋 tracked 歷史操作；Discard、未追蹤檔案與 backup retention 尚未完成。
 - **Task queue 收尾**：補 Windows Job Object、子行程清理、更多長操作接入。
 
@@ -142,13 +141,13 @@ PuffGittt 已具備完整的日常 Git 工作流：Changes、History、Branches�
 - Task queue 仍為 in-process；無 cross-process / Job Object。
 - Frontend 尚無 unit / component test。
 - 大型 repo 效能尚未量測。
-- 認證與 signing 仍依賴 Git / OS 外部設定。
+- Signing 仍依賴 Git / OS 外部設定；遠端認證已可在 App 內設定，但尚未支援 GitHub OAuth Device Flow。
 
 ---
 
 ## 六、建議實作順序
 
-1. **Auth 與安全網**：Credential / SSH、Discard 備份、backup retention。
+1. **安全網**：Discard 備份、untracked 備份、backup retention。
 2. **Repository 深度**：Submodule CRUD、Stash partial apply、Task queue 收尾。
 3. **Diff / Conflict**：Monaco gutter staging、hunk-level conflict。
 4. **生態與發佈**：Signed commits、custom actions、diagnostics、installer / updater。

@@ -2876,6 +2876,24 @@ svg {
   gap: 8px;
 }
 
+.auth-url {
+  color: var(--text-tertiary);
+  font-size: var(--font-size-secondary);
+  word-break: break-all;
+}
+
+.auth-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.auth-result {
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
 .form-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;

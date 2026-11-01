@@ -281,3 +281,44 @@ type UndoRecord struct {
 	BackupRef string `json:"backupRef,omitempty"`
 	Time      string `json:"time"`
 }
+
+type RemoteAuthStatus struct {
+	Remote           string `json:"remote"`
+	URL              string `json:"url"`
+	Protocol         string `json:"protocol"`
+	Host             string `json:"host"`
+	Username         string `json:"username,omitempty"`
+	HasCredential    bool   `json:"hasCredential"`
+	CredentialHelper string `json:"credentialHelper,omitempty"`
+	SSHKeyFound      bool   `json:"sshKeyFound"`
+	HostKeyKnown     bool   `json:"hostKeyKnown"`
+}
+
+type RemoteTestResult struct {
+	OK              bool   `json:"ok"`
+	Message         string `json:"message"`
+	AuthRequired    bool   `json:"authRequired"`
+	HostKeyRequired bool   `json:"hostKeyRequired"`
+	Host            string `json:"host,omitempty"`
+	Protocol        string `json:"protocol,omitempty"`
+}
+
+type SSHHostKey struct {
+	Host        string `json:"host"`
+	Algorithm   string `json:"algorithm"`
+	Fingerprint string `json:"fingerprint"`
+	Key         string `json:"key"`
+}
+
+type SSHKeyInfo struct {
+	Path      string `json:"path"`
+	Type      string `json:"type"`
+	HasPublic bool   `json:"hasPublic"`
+}
+
+type SSHKeyList struct {
+	Keys         []SSHKeyInfo `json:"keys"`
+	AgentRunning bool         `json:"agentRunning"`
+	AgentKeys    int          `json:"agentKeys"`
+	KnownHosts   string       `json:"knownHosts"`
+}

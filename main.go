@@ -32,6 +32,7 @@ func main() {
 	stashAPI := api.NewStashAPI(service)
 	tagAPI := api.NewTagAPI(service)
 	taskAPI := api.NewTaskAPI(service)
+	remoteAuthAPI := api.NewRemoteAuthAPI(service)
 
 	err := wails.Run(&options.App{
 		Title:            "PuffGittt",
@@ -60,6 +61,7 @@ func main() {
 			stashAPI,
 			tagAPI,
 			taskAPI,
+			remoteAuthAPI,
 		},
 		Windows: &windows.Options{
 			BackdropType:         windows.Mica,

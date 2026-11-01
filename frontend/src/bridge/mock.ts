@@ -16,10 +16,14 @@ import type {
   OperationResult,
   RecentRepo,
   ReflogEntry,
+  RemoteAuthStatus,
   RemoteTag,
+  RemoteTestResult,
   Repository,
   RebaseTodo,
   Settings,
+  SSHHostKey,
+  SSHKeyList,
   StashEntry,
   Status,
   Submodule,
@@ -474,6 +478,48 @@ export async function mockInvoke<T>(group: string, method: string, args: any[]):
     case "SyncAPI.SetRemoteURL":
     case "SyncAPI.RemoveRemote":
       return ok("Synchronized") as T;
+    case "RemoteAuthAPI.Status":
+      return {
+        remote: args[1],
+        url: "https://github.com/example/puffgittt.git",
+        protocol: "https",
+        host: "github.com",
+        username: "x-access-token",
+        hasCredential: true,
+        credentialHelper: "manager",
+        sshKeyFound: false,
+        hostKeyKnown: true,
+      } as RemoteAuthStatus as T;
+    case "RemoteAuthAPI.Test":
+    case "RemoteAuthAPI.Save":
+      return {
+        ok: true,
+        message: "認證成功，讀取到 3 個 remote branch",
+        authRequired: false,
+        hostKeyRequired: false,
+        host: "github.com",
+        protocol: "https",
+      } as RemoteTestResult as T;
+    case "RemoteAuthAPI.Forget":
+      return ok("已移除儲存的遠端憑證。") as T;
+    case "RemoteAuthAPI.SSHKeys":
+      return {
+        keys: [{ path: "C:\\Users\\demo\\.ssh\\id_ed25519", type: "id_ed25519", hasPublic: true }],
+        agentRunning: true,
+        agentKeys: 1,
+        knownHosts: "C:\\Users\\demo\\.ssh\\known_hosts",
+      } as SSHKeyList as T;
+    case "RemoteAuthAPI.SSHHostKeys":
+      return [
+        {
+          host: String(args[0]),
+          algorithm: "ssh-ed25519",
+          fingerprint: "SHA256:mockfingerprint",
+          key: `${args[0]} ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIMock`,
+        },
+      ] as SSHHostKey[] as T;
+    case "RemoteAuthAPI.TrustHost":
+      return ok("已將 host key 加入 known_hosts。") as T;
     case "SyncAPI.Preview": {
       const request = args[1] as CommandRequest;
       const commands: Record<string, string> = {
