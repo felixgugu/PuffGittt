@@ -470,6 +470,12 @@ svg {
   color: var(--text);
 }
 
+.sidebar-section-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
 .repo-list {
   flex: 1;
   display: flex;

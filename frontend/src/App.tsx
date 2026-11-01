@@ -5,7 +5,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import i18n from "./i18n";
 import { api, setNativeTheme } from "./bridge/api";
 import { useActiveTab, useAppStore, type ThemeMode, type ViewKey } from "./store";
-import type { Environment, Repository, Settings } from "./types";
+import type { Environment, Repository, Settings, WorkspaceRepository } from "./types";
 import { WelcomeView } from "./views/WelcomeView";
 import { ChangesView } from "./views/ChangesView";
 import { HistoryView } from "./views/HistoryView";
@@ -230,6 +230,28 @@ export default function App() {
     });
   };
 
+  const handleAddProjectFolder = async () => {
+    try {
+      const path = await api.app.pickFolder("新增專案資料夾");
+      if (!path) return;
+      const repo = await api.app.addWorkspaceFolder(path);
+      void queryClient.invalidateQueries({ queryKey: ["workspaceRepositories"] });
+      setStatusMessage(`已將 ${repo.name} 加入專案清單`);
+    } catch (error: any) {
+      setStatusMessage(error?.message || String(error));
+    }
+  };
+
+  const handleRemoveProjectRepository = async (repo: WorkspaceRepository) => {
+    try {
+      await api.app.removeWorkspaceRepository(repo.path);
+      void queryClient.invalidateQueries({ queryKey: ["workspaceRepositories"] });
+      setStatusMessage(`已從專案清單移除 ${repo.name}`);
+    } catch (error: any) {
+      setStatusMessage(error?.message || String(error));
+    }
+  };
+
   const beginSidebarResize = (event: ReactPointerEvent<HTMLDivElement>) => {
     if (sidebarCollapsed) return;
     event.preventDefault();
@@ -305,6 +327,8 @@ export default function App() {
             onNavigate={(view) => activeTab && setView(activeTab.repo.rootPath, view)}
             onOpenRepository={(path) => void openPath(path)}
             onOpenProjects={handleOpenProjectsFolder}
+            onAddRepository={() => void handleAddProjectFolder()}
+            onRemoveRepository={(repo) => void handleRemoveProjectRepository(repo)}
           />
           {!sidebarCollapsed ? (
             <div className="sidebar-resizer" onPointerDown={beginSidebarResize} role="separator" aria-orientation="vertical" />

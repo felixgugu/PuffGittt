@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from "react";
 import {
+  Add24Regular,
   Branch24Regular,
   DocumentBulletList24Regular,
   Folder24Regular,
@@ -11,6 +12,7 @@ import {
   ArrowSync24Regular,
 } from "@fluentui/react-icons";
 import { useTranslation } from "react-i18next";
+import { ContextMenu } from "./ContextMenu";
 import type { RepoTab, ViewKey } from "../store";
 import type { WorkspaceRepository } from "../types";
 
@@ -25,6 +27,8 @@ interface SidebarProps {
   onNavigate: (view: ViewKey) => void;
   onOpenRepository: (path: string) => void;
   onOpenProjects: () => void;
+  onAddRepository: () => void;
+  onRemoveRepository: (repo: WorkspaceRepository) => void;
 }
 
 const navItems: { key: ViewKey; icon: ReactNode; label?: string }[] = [
@@ -47,6 +51,8 @@ export function Sidebar({
   onNavigate,
   onOpenRepository,
   onOpenProjects,
+  onAddRepository,
+  onRemoveRepository,
 }: SidebarProps) {
   const { t } = useTranslation();
   const repoItems = useMemo(() => {
@@ -61,6 +67,7 @@ export function Sidebar({
     const stored = Number(localStorage.getItem("puffgittt:sidebarReposHeight"));
     return Number.isFinite(stored) && stored >= 140 ? stored : 240;
   });
+  const [repoMenu, setRepoMenu] = useState<{ x: number; y: number; repo: WorkspaceRepository } | null>(null);
 
   useEffect(() => {
     localStorage.setItem("puffgittt:sidebarReposHeight", String(reposHeight));
@@ -139,9 +146,14 @@ export function Sidebar({
           <div className="sidebar-repos" style={{ height: reposHeight }}>
             <div className="sidebar-section-title">
               <span>{t("sidebar.projects")}</span>
-              <button type="button" className="sidebar-mini-button" title={t("sidebar.openProjects")} onClick={onOpenProjects}>
-                <Folder24Regular />
-              </button>
+              <div className="sidebar-section-actions">
+                <button type="button" className="sidebar-mini-button" title={t("sidebar.openProjects")} onClick={onOpenProjects}>
+                  <Folder24Regular />
+                </button>
+                <button type="button" className="sidebar-mini-button" title="新增專案資料夾" onClick={onAddRepository}>
+                  <Add24Regular />
+                </button>
+              </div>
             </div>
             <div className="repo-list-header" aria-hidden="true">
               <span>資料夾名稱</span>
@@ -156,6 +168,10 @@ export function Sidebar({
                   className={`repo-list-item${activeTab?.repo.rootPath === repo.path ? " active" : ""}`}
                   title={repo.path}
                   onClick={() => onOpenRepository(repo.path)}
+                  onContextMenu={(event) => {
+                    event.preventDefault();
+                    setRepoMenu({ x: event.clientX, y: event.clientY, repo });
+                  }}
                 >
                   <span className="repo-list-name">{repo.name}</span>
                   <span className="repo-list-branch">{repo.branch || "-"}</span>
@@ -171,6 +187,27 @@ export function Sidebar({
       ) : (
         <div className="sidebar-collapsed-spacer" />
       )}
+
+      {repoMenu ? (
+        <ContextMenu
+          x={repoMenu.x}
+          y={repoMenu.y}
+          onClose={() => setRepoMenu(null)}
+          items={[
+            {
+              key: "open",
+              label: `開啟 ${repoMenu.repo.name}`,
+              onSelect: () => onOpenRepository(repoMenu.repo.path),
+            },
+            { divider: true },
+            {
+              key: "remove",
+              label: "從專案清單移除",
+              onSelect: () => onRemoveRepository(repoMenu.repo),
+            },
+          ]}
+        />
+      ) : null}
     </aside>
   );
 }

@@ -188,6 +188,10 @@ func (a *AppAPI) ListWorkspaceRepositories() []model.WorkspaceRepository {
 	settings := a.s.cfg.LoadSettings()
 	runner := a.s.runnerWithSettings()
 	seen := map[string]bool{}
+	hidden := map[string]bool{}
+	for _, path := range settings.HiddenProjects {
+		hidden[workspacePathKey(path)] = true
+	}
 	result := []model.WorkspaceRepository{}
 
 	add := func(path, kind string) {
@@ -198,8 +202,8 @@ func (a *AppAPI) ListWorkspaceRepositories() []model.WorkspaceRepository {
 		if err != nil {
 			return
 		}
-		key := strings.ToLower(filepath.Clean(repo.RootPath))
-		if seen[key] {
+		key := workspacePathKey(repo.RootPath)
+		if seen[key] || hidden[key] {
 			return
 		}
 		seen[key] = true
@@ -231,17 +235,87 @@ func (a *AppAPI) ListWorkspaceRepositories() []model.WorkspaceRepository {
 			}
 		}
 	}
+	for _, path := range settings.WorkspaceFolders {
+		add(path, "workspace")
+	}
 	for _, recent := range settings.Recent {
 		add(recent.Path, "recent")
 	}
 
+	rank := func(kind string) int {
+		switch kind {
+		case "project":
+			return 0
+		case "workspace":
+			return 1
+		default:
+			return 2
+		}
+	}
 	sort.SliceStable(result, func(i, j int) bool {
 		if result[i].Kind != result[j].Kind {
-			return result[i].Kind == "project"
+			return rank(result[i].Kind) < rank(result[j].Kind)
 		}
 		return strings.ToLower(result[i].Name) < strings.ToLower(result[j].Name)
 	})
 	return result
+}
+
+func (a *AppAPI) AddWorkspaceFolder(path string) (model.Repository, error) {
+	repo, err := a.s.runnerWithSettings().Open(a.s.context(), path)
+	if err != nil {
+		return model.Repository{}, err
+	}
+	settings := a.s.cfg.LoadSettings()
+	settings.HiddenProjects = withoutWorkspacePath(settings.HiddenProjects, repo.RootPath)
+	if !hasWorkspacePath(settings.WorkspaceFolders, repo.RootPath) {
+		settings.WorkspaceFolders = append(settings.WorkspaceFolders, repo.RootPath)
+	}
+	if err := a.s.cfg.SaveSettings(settings); err != nil {
+		return model.Repository{}, err
+	}
+	return repo, nil
+}
+
+func (a *AppAPI) RemoveWorkspaceRepository(path string) error {
+	settings := a.s.cfg.LoadSettings()
+	settings.WorkspaceFolders = withoutWorkspacePath(settings.WorkspaceFolders, path)
+	filtered := settings.Recent[:0]
+	for _, entry := range settings.Recent {
+		if workspacePathKey(entry.Path) != workspacePathKey(path) {
+			filtered = append(filtered, entry)
+		}
+	}
+	settings.Recent = filtered
+	if !hasWorkspacePath(settings.HiddenProjects, path) {
+		settings.HiddenProjects = append(settings.HiddenProjects, path)
+	}
+	return a.s.cfg.SaveSettings(settings)
+}
+
+func workspacePathKey(path string) string {
+	return strings.ToLower(filepath.Clean(strings.TrimSpace(path)))
+}
+
+func hasWorkspacePath(paths []string, path string) bool {
+	key := workspacePathKey(path)
+	for _, entry := range paths {
+		if workspacePathKey(entry) == key {
+			return true
+		}
+	}
+	return false
+}
+
+func withoutWorkspacePath(paths []string, path string) []string {
+	key := workspacePathKey(path)
+	out := paths[:0]
+	for _, entry := range paths {
+		if workspacePathKey(entry) != key {
+			out = append(out, entry)
+		}
+	}
+	return out
 }
 
 func (a *AppAPI) PickFolder(title string) (string, error) {
@@ -255,6 +329,11 @@ func (a *AppAPI) OpenRepository(path string) (model.Repository, error) {
 	repo, err := a.s.runnerWithSettings().Open(a.s.context(), path)
 	if err != nil {
 		return model.Repository{}, err
+	}
+	settings := a.s.cfg.LoadSettings()
+	if hasWorkspacePath(settings.HiddenProjects, repo.RootPath) {
+		settings.HiddenProjects = withoutWorkspacePath(settings.HiddenProjects, repo.RootPath)
+		_ = a.s.cfg.SaveSettings(settings)
 	}
 	a.s.cfg.TouchRecent(repo.RootPath, repo.Name)
 	return repo, nil

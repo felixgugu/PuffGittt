@@ -74,7 +74,8 @@ wails build
 - Settings: theme, language, base font size and family, projects folder,
   Git executable path, commit identity, and About/environment versions.
 - Frameless window with an integrated title bar; collapsible/resizable sidebar with
-  a resizable merged project list.
+  a resizable merged project list; repositories can be added or removed without
+  deleting files.
 - Traditional Chinese / English UI, warm light/dark theme tokens and scalable typography.
 - Windows application icon generated from `appicon.png`.
 

@@ -212,15 +212,17 @@ type RecentRepo struct {
 }
 
 type Settings struct {
-	Theme        string       `json:"theme"`
-	Language     string       `json:"language"`
-	FontFamily   string       `json:"fontFamily"`
-	BaseFontSize int          `json:"baseFontSize"`
-	GitPath      string       `json:"gitPath"`
-	ProjectsRoot string       `json:"projectsRoot"`
-	AuthorName   string       `json:"authorName"`
-	AuthorEmail  string       `json:"authorEmail"`
-	Recent       []RecentRepo `json:"recent"`
+	Theme            string       `json:"theme"`
+	Language         string       `json:"language"`
+	FontFamily       string       `json:"fontFamily"`
+	BaseFontSize     int          `json:"baseFontSize"`
+	GitPath          string       `json:"gitPath"`
+	ProjectsRoot     string       `json:"projectsRoot"`
+	WorkspaceFolders []string     `json:"workspaceFolders"`
+	HiddenProjects   []string     `json:"hiddenProjects"`
+	AuthorName       string       `json:"authorName"`
+	AuthorEmail      string       `json:"authorEmail"`
+	Recent           []RecentRepo `json:"recent"`
 }
 
 type WorkspaceRepository struct {

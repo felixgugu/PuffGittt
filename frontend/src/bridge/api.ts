@@ -80,6 +80,10 @@ export const api = {
     openExternal: (url: string) => invoke<void>("AppAPI", "OpenExternal", url),
     watchRepository: (root: string) => invoke<void>("AppAPI", "WatchRepository", root),
     unwatchRepository: (root: string) => invoke<void>("AppAPI", "UnwatchRepository", root),
+    addWorkspaceFolder: (path: string) =>
+      invoke<Repository>("AppAPI", "AddWorkspaceFolder", path),
+    removeWorkspaceRepository: (path: string) =>
+      invoke<void>("AppAPI", "RemoveWorkspaceRepository", path),
   },
   window: {
     minimize: () => invokeMain<void>("MinimizeWindow"),

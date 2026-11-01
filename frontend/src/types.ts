@@ -221,6 +221,8 @@ export interface Settings {
   baseFontSize: number;
   gitPath: string;
   projectsRoot: string;
+  workspaceFolders?: string[];
+  hiddenProjects?: string[];
   authorName: string;
   authorEmail: string;
   recent: RecentRepo[];

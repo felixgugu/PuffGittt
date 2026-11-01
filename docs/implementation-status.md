@@ -17,6 +17,7 @@ This file tracks the gap between the current PuffGittt build and
   persisted state.
 - Sidebar workspace list built from the projects folder and recently opened
   repositories, deduplicated and enriched with branch and change counts.
+- Add repository folders to the sidebar and remove entries without deleting files.
 - Merged project/recent list with a draggable section resizer and persisted height.
 - Windows icon generated from `appicon.png`; brand art removed from main screens.
 - Multi-repository tabs and singleton process-level settings.

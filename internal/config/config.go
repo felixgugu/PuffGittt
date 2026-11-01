@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strings"
 	"sync"
 	"time"
 
@@ -96,6 +97,8 @@ func (c *Config) LoadSettings() model.Settings {
 	if settings.Recent == nil {
 		settings.Recent = []model.RecentRepo{}
 	}
+	settings.WorkspaceFolders = normalizePathList(settings.WorkspaceFolders)
+	settings.HiddenProjects = normalizePathList(settings.HiddenProjects)
 	return settings
 }
 
@@ -115,6 +118,8 @@ func (c *Config) SaveSettings(settings model.Settings) error {
 	if settings.Recent == nil {
 		settings.Recent = []model.RecentRepo{}
 	}
+	settings.WorkspaceFolders = normalizePathList(settings.WorkspaceFolders)
+	settings.HiddenProjects = normalizePathList(settings.HiddenProjects)
 	sort.SliceStable(settings.Recent, func(i, j int) bool {
 		return settings.Recent[i].LastOpened > settings.Recent[j].LastOpened
 	})
@@ -163,6 +168,24 @@ func (c *Config) RemoveRecent(path string) error {
 	}
 	settings.Recent = out
 	return c.SaveSettings(settings)
+}
+
+func normalizePathList(paths []string) []string {
+	out := make([]string, 0, len(paths))
+	seen := map[string]bool{}
+	for _, path := range paths {
+		path = strings.TrimSpace(path)
+		if path == "" {
+			continue
+		}
+		key := strings.ToLower(filepath.Clean(path))
+		if seen[key] {
+			continue
+		}
+		seen[key] = true
+		out = append(out, path)
+	}
+	return out
 }
 
 func samePath(a, b string) bool {

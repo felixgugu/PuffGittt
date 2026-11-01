@@ -477,6 +477,10 @@ export async function mockInvoke<T>(group: string, method: string, args: any[]):
     case "AppAPI.OpenExternal":
     case "AppAPI.WatchRepository":
     case "AppAPI.UnwatchRepository":
+    case "AppAPI.RemoveWorkspaceRepository":
+      return undefined as T;
+    case "AppAPI.AddWorkspaceFolder":
+      return repo as Repository as T;
     case "App.SetTheme":
     case "App.MinimizeWindow":
     case "App.ToggleMaximizeWindow":
