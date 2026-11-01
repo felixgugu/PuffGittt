@@ -515,6 +515,42 @@ func (a *RepoAPI) SyncSubmodules(root string) (model.OperationResult, error) {
 	})
 }
 
+func (a *RepoAPI) GetLFS(root string) (git.LFSStatus, error) {
+	return a.s.runnerWithSettings().LFSStatus(a.s.context(), root)
+}
+
+func (a *RepoAPI) TrackLFS(root, pattern string) (model.OperationResult, error) {
+	mu := a.s.repoLock(root)
+	mu.Lock()
+	defer mu.Unlock()
+	return a.s.runnerWithSettings().TrackLFS(a.s.context(), root, pattern)
+}
+
+func (a *RepoAPI) UntrackLFS(root, pattern string) (model.OperationResult, error) {
+	mu := a.s.repoLock(root)
+	mu.Lock()
+	defer mu.Unlock()
+	return a.s.runnerWithSettings().UntrackLFS(a.s.context(), root, pattern)
+}
+
+func (a *RepoAPI) PullLFS(root string) (model.OperationResult, error) {
+	return runTask(a.s, root, "LFS pull", true, func(ctx context.Context) (model.OperationResult, error) {
+		mu := a.s.repoLock(root)
+		mu.Lock()
+		defer mu.Unlock()
+		return a.s.runnerWithSettings().PullLFS(ctx, root)
+	})
+}
+
+func (a *RepoAPI) PushLFS(root, remote string) (model.OperationResult, error) {
+	return runTask(a.s, root, "LFS push "+strings.TrimSpace(remote), true, func(ctx context.Context) (model.OperationResult, error) {
+		mu := a.s.repoLock(root)
+		mu.Lock()
+		defer mu.Unlock()
+		return a.s.runnerWithSettings().PushLFS(ctx, root, remote)
+	})
+}
+
 func (a *ChangeAPI) GetDiff(root, path, side, revision string) (model.DiffDocument, error) {
 	return a.s.runnerWithSettings().Diff(a.s.context(), root, path, side, revision)
 }

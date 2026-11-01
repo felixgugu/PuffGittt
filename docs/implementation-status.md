@@ -148,6 +148,9 @@ This file tracks the gap between the current PuffGittt build and
 - **Remotes**: remote add/edit/delete UI exists; credential prompts and SSH host-key
   verification are still missing.
 - **Settings identity**: used for commits via `git -c`, not written to repo config.
+- **Git LFS**: detects `git lfs`, shows patterns and files, supports track /
+  untrack / pull / push. Stage-time LFS hints and nested `.gitattributes` are not
+  implemented.
 - **Refresh**: repository change monitor polls porcelain status every 1.5 seconds;
   there is no fsnotify watcher or per-directory event stream yet.
 - **Concurrency**: in-process per-repository task queue for long operations plus
@@ -182,7 +185,7 @@ This file tracks the gap between the current PuffGittt build and
 - Image diff (before/after, slider, checkerboard): before/after images are shown,
   but there is no slider or overlay comparison.
 - Submodules are list/update/sync only; adding, removing or editing `.gitmodules`
-  is not exposed. Git LFS is not implemented.
+  is not exposed.
 - Embedded terminal / ConPTY.
 - Credential prompts and SSH host-key verification.
 - Backup retention and restore UI.

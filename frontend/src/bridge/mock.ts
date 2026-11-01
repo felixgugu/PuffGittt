@@ -12,6 +12,7 @@ import type {
   DiffDocument,
   FileChange,
   HunkSelection,
+  LFSStatus,
   OperationResult,
   RecentRepo,
   ReflogEntry,
@@ -272,6 +273,18 @@ export async function mockInvoke<T>(group: string, method: string, args: any[]):
       return [
         { path: "vendor/demo", oid: "1234567890abcdef1234567890abcdef12345678", describe: "v1.0.0", status: "clean" },
       ] as Submodule[] as T;
+    case "RepoAPI.GetLFS":
+      return {
+        installed: true,
+        version: "git-lfs/3.7.1",
+        files: ["assets/demo.psd"],
+        patterns: ["*.psd"],
+      } as LFSStatus as T;
+    case "RepoAPI.TrackLFS":
+    case "RepoAPI.UntrackLFS":
+    case "RepoAPI.PullLFS":
+    case "RepoAPI.PushLFS":
+      return ok("LFS updated") as T;
     case "RepoAPI.UpdateSubmodule":
     case "RepoAPI.SyncSubmodules":
       return ok("Submodules updated") as T;

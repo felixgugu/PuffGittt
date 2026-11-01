@@ -79,7 +79,8 @@ wails build
 - Tags: local/remote tag lists, create lightweight/annotated/signed tags, delete
   local and remote tags, push a tag and push all tags.
 - Settings: theme, language, base font size and family, projects folder,
-  Git executable path, commit identity, and About/environment versions.
+  Git executable path, commit identity, Git LFS status / track / pull / push, and
+  About/environment versions.
 - Frameless window with an integrated title bar; collapsible/resizable sidebar with
   a resizable merged project list; repositories can be added or removed without
   deleting files.
@@ -95,7 +96,6 @@ current feature inventory and recommendations.
 
 Highlights:
 
-- Git LFS.
 - SSH host-key UI and credential prompts.
 - Terminal/ConPTY, Git Flow, provider integrations and custom actions.
 - High-contrast theme.

@@ -2830,6 +2830,12 @@ svg {
   font-weight: 650;
 }
 
+.settings-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
 .form-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;

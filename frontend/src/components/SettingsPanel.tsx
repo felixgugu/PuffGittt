@@ -6,13 +6,21 @@ import {
   Field,
   Slider,
 } from "@fluentui/react-components";
-import { Dismiss24Regular, FolderOpen24Regular } from "@fluentui/react-icons";
+import {
+  ArrowClockwise24Regular,
+  ArrowDownload24Regular,
+  ArrowUpload24Regular,
+  Dismiss24Regular,
+  FolderOpen24Regular,
+} from "@fluentui/react-icons";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { api } from "../bridge/api";
 import { UnderlineInput, UnderlineSelect } from "./FormControls";
-import type { Environment, Settings } from "../types";
+import type { Environment, LFSStatus, Settings } from "../types";
 
 interface SettingsPanelProps {
+  root?: string;
   settings?: Settings;
   environment?: Environment;
   onClose: () => void;
@@ -35,6 +43,7 @@ const emptySettings: Settings = {
 };
 
 export function SettingsPanel({
+  root,
   settings,
   environment,
   onClose,
@@ -44,11 +53,44 @@ export function SettingsPanel({
   onFontSizeChange,
 }: SettingsPanelProps) {
   const { t } = useTranslation();
+  const queryClient = useQueryClient();
   const [draft, setDraft] = useState<Settings>(settings || emptySettings);
+  const [lfsPattern, setLfsPattern] = useState("");
+  const [lfsBusy, setLfsBusy] = useState<string | null>(null);
+  const [lfsMessage, setLfsMessage] = useState("");
+  const lfs = useQuery({
+    queryKey: ["lfs", root],
+    queryFn: () => api.repo.getLfs(root!),
+    enabled: !!root,
+  });
+  const remotes = useQuery({
+    queryKey: ["remotes", root],
+    queryFn: () => api.sync.listRemotes(root!),
+    enabled: !!root,
+  });
+  const remoteName = remotes.data?.[0]?.name || "";
 
   useEffect(() => {
     if (settings) setDraft(settings);
   }, [settings]);
+
+  const refreshLfs = () => {
+    void queryClient.invalidateQueries({ queryKey: ["lfs", root] });
+    void queryClient.invalidateQueries({ queryKey: ["status", root] });
+  };
+
+  const runLfs = async (key: string, action: () => Promise<{ message: string }>) => {
+    setLfsBusy(key);
+    try {
+      const result = await action();
+      setLfsMessage(result.message);
+      refreshLfs();
+    } catch (error: any) {
+      setLfsMessage(error?.message || String(error));
+    } finally {
+      setLfsBusy(null);
+    }
+  };
 
   const update = <K extends keyof Settings>(key: K, value: Settings[K]) => {
     setDraft((current) => ({ ...current, [key]: value }));
@@ -168,6 +210,97 @@ export function SettingsPanel({
                 <UnderlineInput value={draft.authorEmail} onChange={(_, data) => update("authorEmail", data.value)} />
               </Field>
             </div>
+          </section>
+
+          <Divider />
+
+          <section className="settings-section">
+            <h3>Git LFS</h3>
+            {!root ? (
+              <p className="muted">請先開啟一個 repository。</p>
+            ) : lfs.isLoading ? (
+              <p className="muted">載入中…</p>
+            ) : lfs.data ? (
+              <>
+                <div className="environment-line">
+                  <Badge appearance="tint" color={lfs.data.installed ? "success" : "warning"}>
+                    {lfs.data.installed ? "已安裝" : "未安裝"}
+                  </Badge>
+                  <span>{lfs.data.version || "git lfs not found"}</span>
+                  <Button
+                    size="small"
+                    appearance="subtle"
+                    icon={<ArrowClockwise24Regular />}
+                    title="重新整理"
+                    onClick={() => void lfs.refetch()}
+                    disabled={!!lfsBusy}
+                  />
+                </div>
+                {!lfs.data.installed ? (
+                  <p className="muted">請先安裝 Git LFS，並執行 `git lfs install`。</p>
+                ) : (
+                  <>
+                    <Field label="追蹤 pattern">
+                      <div className="input-with-button">
+                        <UnderlineInput
+                          value={lfsPattern}
+                          onChange={(_, data) => setLfsPattern(data.value)}
+                          placeholder="*.psd"
+                        />
+                        <Button
+                          onClick={() => {
+                            if (!lfsPattern.trim()) return;
+                            void runLfs("track", () => api.repo.trackLfs(root, lfsPattern.trim())).then(() => setLfsPattern(""));
+                          }}
+                          disabled={!lfsPattern.trim() || !!lfsBusy}
+                        >
+                          Track
+                        </Button>
+                      </div>
+                    </Field>
+                    <div className="remote-list">
+                      {lfs.data.patterns.map((pattern) => (
+                        <div className="remote-row" key={pattern}>
+                          <div className="remote-copy"><strong>{pattern}</strong></div>
+                          <Button
+                            size="small"
+                            appearance="subtle"
+                            icon={<Dismiss24Regular />}
+                            title="取消追蹤"
+                            disabled={!!lfsBusy}
+                            onClick={() => void runLfs("untrack", () => api.repo.untrackLfs(root, pattern))}
+                          />
+                        </div>
+                      ))}
+                      {lfs.data.patterns.length === 0 ? <div className="empty-state">尚未追蹤任何 pattern</div> : null}
+                    </div>
+                    <div className="muted">
+                      {lfs.data.files.length} 個 LFS 檔案
+                      {lfs.data.files.length > 0 ? `：${lfs.data.files.slice(0, 5).join("、")}` : ""}
+                    </div>
+                    <div className="settings-actions">
+                      <Button
+                        size="small"
+                        icon={<ArrowDownload24Regular />}
+                        onClick={() => void runLfs("pull", () => api.repo.pullLfs(root))}
+                        disabled={!!lfsBusy}
+                      >
+                        Pull LFS
+                      </Button>
+                      <Button
+                        size="small"
+                        icon={<ArrowUpload24Regular />}
+                        onClick={() => void runLfs("push", () => api.repo.pushLfs(root, remoteName))}
+                        disabled={!remoteName || !!lfsBusy}
+                      >
+                        Push LFS
+                      </Button>
+                    </div>
+                    {lfsMessage ? <p className="muted">{lfsMessage}</p> : null}
+                  </>
+                )}
+              </>
+            ) : null}
           </section>
 
           <Divider />

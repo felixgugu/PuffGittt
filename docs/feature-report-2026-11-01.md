@@ -25,15 +25,15 @@ PuffGittt 目前已經從「可用的 Git 前端」進展到可以支撐日常�
 1. **備份安全網**：Discard 備份、未追蹤檔案、backup retention policy。
 2. **遠端認證**：SSH host-key、credential prompt、連線測試。
 3. **衝突編輯**：hunk-level conflict resolution、ours/theirs/both 進階操作。
-4. **完整生態功能**：Git LFS、signed commits、Git Flow、provider 整合。
+4. **完整生態功能**：signed commits、Git Flow、provider 整合。
 5. **大規模專案體驗**：跨頁 graph、效能、無障礙與高對比。
 
 **最值得優先投入的方向：**
 
 1. SSH / credential 流程。
-2. Git LFS。
-3. Discard 備份與 backup retention。
-4. Hunk-level conflict resolution。
+2. Discard 備份與 backup retention。
+3. Hunk-level conflict resolution。
+4. Signed commits 與 Git Flow。
 
 ---
 
@@ -137,7 +137,7 @@ PuffGittt 目前已經從「可用的 Git 前端」進展到可以支撐日常�
 | Remote 管理 | 完成 | Branches 頁面 |
 | Worktree | 完成 | list / add / remove / prune |
 | Submodule | 部分 | list / update / sync；無 add / remove / `.gitmodules` 編輯 |
-| Git LFS | 未實作 | |
+| Git LFS | 完成 | 偵測、patterns、檔案、track / untrack、pull / push |
 | Repository change monitor | 部分 | 1.5 秒 polling，非 fsnotify |
 | Background task queue | 部分 | 長操作使用 per-repo queue、StatusBar 顯示與取消；pull / merge / rebase 不可取消 |
 | Diagnostics export | 未實作 | |
@@ -181,7 +181,7 @@ PuffGittt 目前已經從「可用的 Git 前端」進展到可以支撐日常�
 | Stashes | 有 | 有 | 部分 | P2 |
 | Submodules | 有 | 有 | 部分 | P1 |
 | Worktrees | 有 | 部分 | 有 | - |
-| Git LFS | 有 | 有 | 無 | P1 |
+| Git LFS | 有 | 有 | 有 | - |
 | Git Flow | 部分 | 有 | 無 | P3 |
 | Signed commits | 有 | 部分 | 無 | P2 |
 | Sparse checkout | 有 | 部分 | 無 | P3 |
@@ -371,28 +371,31 @@ PuffGittt 目前已經從「可用的 Git 前端」進展到可以支撐日常�
 
 ### P1-3：Git LFS
 
-**現況**
+**狀態：已實作（基礎）**
 
-- 完全沒有 LFS 支援。
-- 大型 binary 會被當成一般 binary，無法 preview 或追蹤。
-
-**建議範圍**
+**已完成**
 
 - 偵測 `git lfs` 是否安裝與版本。
-- 顯示 LFS tracked patterns 與檔案。
-- `git lfs track` / `untrack`。
-- `git lfs pull` / `fetch` / `push`。
-- Stage 前提示檔案是否應加入 LFS。
-- LFS 未安裝時提供安裝指引，而不是直接失敗。
+- Settings 顯示 LFS tracked patterns 與 LFS 檔案數量 / 前幾個檔案。
+- `git lfs track` / `untrack`，會更新 `.gitattributes`。
+- `git lfs pull` / `push --all <remote>`。
+- LFS 未安裝時顯示安裝提示，不會直接讓操作失敗。
+- Pull / Push 接入 task queue，可顯示進度與取消。
 
-**驗收條件**
+**限制**
 
-- 可在 UI 看到 LFS 檔案清單與 patterns。
+- 尚未在 Stage 前提示檔案是否應加入 LFS。
+- 尚未支援 `git lfs fetch` 的獨立操作與 cherry-pick / worktree 的 LFS 例外處理。
+- 只讀取 repo 根目錄 `.gitattributes` 的 patterns。
+- LFS push 使用第一個 remote。
+
+**驗收結果**
+
+- UI 可看到 LFS patterns 與檔案清單。
 - Track 新 pattern 後 `.gitattributes` 正確更新。
-- Clone 後可 pull LFS 物件。
+- Track / Untrack / Pull / Push 都有結果訊息。
 
-**成本**：Medium  
-**風險**：Medium（外部工具、網路、物件大小）
+**剩餘風險**：Medium（外部工具、網路、大型物件）
 
 ---
 
@@ -651,7 +654,7 @@ PuffGittt 目前已經從「可用的 Git 前端」進展到可以支撐日常�
 1. Credential prompt。
 2. SSH host-key 驗證。
 3. Remote tag 管理與 signed tags（已完成）。
-4. Git LFS。
+4. Git LFS（已完成）。
 5. Submodule add / remove。
 
 **完成後效果**
@@ -781,13 +784,13 @@ PuffGittt 已經具備一套完整的日常 Git 工作流，與 SmartGit / Sourc
 1. **備份安全網**：Discard 備份、未追蹤檔案、backup retention。
 2. **遠端認證**：credential、SSH host-key。
 3. **衝突編輯**：hunk-level conflict resolution。
-4. **生態功能**：LFS、signed commits、Git Flow、providers。
+4. **生態功能**：signed commits、Git Flow、providers。
 5. **大規模體驗**：graph 跨頁、效能、無障礙。
 
 若只能選三個下一步，建議順序是：
 
 1. **Credential / SSH 流程**
-2. **Git LFS**
+2. **Discard 備份與 backup retention**
 3. **Hunk-level conflict resolution**
 
 這三項完成後，PuffGittt 在「真實世界可用性」與「協作功能」會明顯接近 SmartGit / SourceTree，之後再投入 LFS、history UX 與 backup 保留策略，會比較穩定。

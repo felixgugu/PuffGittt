@@ -253,6 +253,13 @@ export interface Environment {
   wails: string;
 }
 
+export interface LFSStatus {
+  installed: boolean;
+  version?: string;
+  files: string[];
+  patterns: string[];
+}
+
 export interface OperationResult {
   success: boolean;
   message: string;

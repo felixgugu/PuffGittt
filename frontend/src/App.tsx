@@ -437,6 +437,7 @@ export default function App() {
 
       {settingsOpen ? (
         <SettingsPanel
+          root={activeTab?.repo.rootPath}
           settings={settings}
           environment={environment}
           onClose={() => setSettingsOpen(false)}

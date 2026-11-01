@@ -14,6 +14,7 @@ import type {
   DiffDocument,
   Environment,
   HunkSelection,
+  LFSStatus,
   OperationResult,
   RecentRepo,
   ReflogEntry,
@@ -100,6 +101,14 @@ export const api = {
     getBranches: (root: string) => invoke<Branch[]>("RepoAPI", "GetBranches", root),
     getRemotes: (root: string) => invoke<Remote[]>("RepoAPI", "GetRemotes", root),
     getSubmodules: (root: string) => invoke<Submodule[]>("RepoAPI", "GetSubmodules", root),
+    getLfs: (root: string) => invoke<LFSStatus>("RepoAPI", "GetLFS", root),
+    trackLfs: (root: string, pattern: string) =>
+      invoke<OperationResult>("RepoAPI", "TrackLFS", root, pattern),
+    untrackLfs: (root: string, pattern: string) =>
+      invoke<OperationResult>("RepoAPI", "UntrackLFS", root, pattern),
+    pullLfs: (root: string) => invoke<OperationResult>("RepoAPI", "PullLFS", root),
+    pushLfs: (root: string, remote: string) =>
+      invoke<OperationResult>("RepoAPI", "PushLFS", root, remote),
     updateSubmodule: (root: string, path: string) =>
       invoke<OperationResult>("RepoAPI", "UpdateSubmodule", root, path),
     syncSubmodules: (root: string) => invoke<OperationResult>("RepoAPI", "SyncSubmodules", root),
