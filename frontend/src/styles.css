@@ -1577,6 +1577,82 @@ svg {
   object-fit: contain;
 }
 
+.undo-modal {
+  width: min(760px, 94vw);
+}
+
+.undo-latest {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface-muted);
+  font-size: var(--font-size-secondary);
+}
+
+.undo-latest strong {
+  font-size: var(--font-size-body);
+}
+
+.undo-backup {
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--success-soft);
+  color: var(--success);
+  font-size: 0.6875rem;
+}
+
+.undo-history {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 260px;
+  overflow: auto;
+}
+
+.undo-history-title {
+  padding: 4px 0;
+  color: var(--text-tertiary);
+  font-size: var(--font-size-secondary);
+  font-weight: 600;
+}
+
+.undo-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 6px;
+  border-bottom: 1px solid var(--border);
+  font-size: var(--font-size-secondary);
+  color: var(--text-secondary);
+}
+
+.undo-row.latest {
+  background: var(--accent-soft);
+  color: var(--text);
+}
+
+.undo-row-index {
+  flex: 0 0 20px;
+  text-align: right;
+  color: var(--text-tertiary);
+}
+
+.undo-row strong {
+  flex: 0 0 150px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.undo-row-oid {
+  flex: 0 0 auto;
+  font-family: var(--font-mono);
+  color: var(--text-secondary);
+}
+
 .selected-file-summary {
   display: flex;
   align-items: center;

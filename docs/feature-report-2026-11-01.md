@@ -22,7 +22,7 @@ PuffGittt 目前已經從「可用的 Git 前端」進展到可以支撐日常�
 
 與 SmartGit / SourceTree 的主要差距，已經不是「缺少基本 Git 操作」，而是以下幾類：
 
-1. **安全網**：多步 Undo、destructive operation backup。
+1. **備份安全網**：Discard 備份、未追蹤檔案、backup retention policy。
 2. **遠端認證**：SSH host-key、credential prompt、連線測試。
 3. **進階歷史編輯**：Interactive Rebase 的 reorder / reword / skip。
 4. **完整生態功能**：Git LFS、remote tags、signed commits、Git Flow、provider 整合。
@@ -30,10 +30,10 @@ PuffGittt 目前已經從「可用的 Git 前端」進展到可以支撐日常�
 
 **最值得優先投入的方向：**
 
-1. 多步 Undo 與 destructive operation backup。
-2. SSH / credential 流程。
-3. Interactive Rebase 補完。
-4. Remote tag 管理與 Git LFS。
+1. SSH / credential 流程。
+2. Interactive Rebase 補完。
+3. Remote tag 管理與 Git LFS。
+4. Discard 備份與 backup retention。
 
 ---
 
@@ -87,7 +87,7 @@ PuffGittt 目前已經從「可用的 Git 前端」進展到可以支撐日常�
 | Drop commit | 完成 | 非 root / merge，且需在目前分支 |
 | Cherry-pick | 完成 | 支援 merge mainline |
 | Reflog | 完成 | History 內的 Commits / Reflog 模式 |
-| Undo | 部分 | 只保留最近一筆，記憶體內，重啟後消失 |
+| Undo | 完成 | 最近 20 筆、持久化；history 操作含 tracked worktree backup |
 | Interactive Rebase | 部分 | pick / squash / fixup / drop；無 reorder / reword / conflict skip |
 | Bisect | 完成 | start / good / bad / reset |
 | File History | 部分 | Dialog 呈現，尚無獨立 workspace |
@@ -164,8 +164,8 @@ PuffGittt 目前已經從「可用的 Git 前端」進展到可以支撐日常�
 | Interactive rebase | 有 | 有 | 部分 | P1 |
 | Cherry-pick | 有 | 有 | 有 | - |
 | Reset / Revert / Drop | 有 | 有 | 有 | - |
-| Reflog / Undo | 有 | 部分 | 部分 | P0 |
-| Multi-step undo / backup | 有 | 部分 | 無 | P0 |
+| Reflog / Undo | 有 | 部分 | 有 | - |
+| Multi-step undo / backup | 有 | 部分 | 部分 | P0 |
 | Bisect | 有 | 部分 | 有 | - |
 | Blame | 有 | 有 | 部分 | P2 |
 | File history | 有 | 有 | 部分 | P2 |
@@ -235,37 +235,33 @@ PuffGittt 目前已經從「可用的 Git 前端」進展到可以支撐日常�
 
 ### P0-2：多步 Undo 與 destructive operation backup
 
-**現況**
+**狀態：已實作（歷史操作）**
 
-- Reset / Revert / Drop / Merge / Rebase / Cherry-pick / Interactive Rebase 成功後會記錄一筆 undo。
-- 只存在記憶體，重啟後消失。
-- Hard Reset 前的 worktree 變更不會備份。
-- Discard 沒有備份。
+**已完成**
 
-**為什麼值得**
+- 每個 repo 保存最近 20 筆 undo record，包含 operation、beforeOid、
+  afterOid、時間、backupRef 與 id。
+- Undo history 持久化到 `%APPDATA%\PuffGittt\backup\undo.json`，重啟後仍可讀取。
+- History 工具列提供 Undo 對話框，可查看最近操作並依序復原。
+- Reset（hard）、Revert、Drop、Merge、Rebase、Cherry-pick、Interactive Rebase
+  會先建立 tracked worktree 的 stash backup。
+- 復原時會 Hard Reset 回 beforeOid，再嘗試以 `git stash apply --index` 還原備份。
+- 無法安全復原時（HEAD 已變、有進行中操作、工作區不乾淨）會顯示原因。
 
-- SmartGit 的 undo / backup 是它與一般 Git GUI 的主要差異之一。
-- PuffGittt 已有多個會改写歷史的操作，安全網不足。
-- 可降低使用者對 Reset / Drop / Rebase 的恐懼。
+**限制**
 
-**建議範圍**
+- Backup 只涵蓋 tracked 的 staged / unstaged 變更，未追蹤檔案不在 stash 內。
+- 尚未備份 Discard；Discard 目前仍無法復原。
+- 尚未提供 backup retention policy、容量上限或備份瀏覽 / 手動還原 UI。
+- 只能依序復原最新一筆，不能跳過較新的記錄。
 
-- 保存最近 N 筆操作：operation、beforeOid、afterOid、branch、timestamp。
-- Hard Reset / Discard 前建立 Git object 或 patch backup。
-- Backup 存放於 app data，不在 repo 內留下檔案。
-- 提供「Undo last operation」與「Backup / Restore」入口。
-- 衝突中或 worktree 不乾淨時，明確拒絕或提示。
-- 保留期限與容量上限。
+**驗收結果**
 
-**驗收條件**
+- Reset --hard 後可還原 HEAD 與被丟棄的 tracked worktree 變更。
+- 連續 Reset 可連續 Undo，且重啟後記錄仍存在。
+- 不可復原時 UI 顯示具體原因。
 
-- Reset --hard 後可還原 HEAD 與被丟棄的 worktree 變更。
-- Drop / Rebase 後可回到操作前分支。
-- 程式重啟後仍可看到最近的 undo / backup 記錄。
-- 無法安全 undo 時，UI 顯示原因而不是直接失敗。
-
-**成本**：Medium–Large  
-**風險**：Medium（資料安全、磁碟容量、物件清理）
+**剩餘風險**：Medium（stash object 清理、未追蹤檔案、Discard 安全網）
 
 ---
 
@@ -624,7 +620,7 @@ PuffGittt 目前已經從「可用的 Git 前端」進展到可以支撐日常�
 ### Wave A：安全網與基礎建設
 
 1. Background task queue、進度、取消（已完成）。
-2. Multi-step Undo 與 destructive operation backup。
+2. Multi-step Undo 與 destructive operation backup（已完成：history 操作）。
 3. fsnotify watcher + debounce（polling fallback）。
 4. Commit 搜尋補完（已完成：message / author / SHA / path）。
 
@@ -767,7 +763,7 @@ G:\PuffGittt-TestRepo
 
 PuffGittt 已經具備一套完整的日常 Git 工作流，與 SmartGit / SourceTree 的差距主要集中在：
 
-1. **安全網**：多步 undo、backup。
+1. **備份安全網**：Discard 備份、未追蹤檔案、backup retention。
 2. **遠端認證**：credential、SSH host-key。
 3. **進階歷史編輯**：rebase reorder / reword / skip、conflict hunk。
 4. **生態功能**：LFS、remote tags、signed commits、Git Flow、providers。
@@ -775,8 +771,8 @@ PuffGittt 已經具備一套完整的日常 Git 工作流，與 SmartGit / Sourc
 
 若只能選三個下一步，建議順序是：
 
-1. **多步 Undo + destructive operation backup**
-2. **Credential / SSH 流程**
-3. **Interactive Rebase 補完**
+1. **Credential / SSH 流程**
+2. **Interactive Rebase 補完**
+3. **Remote tags / Git LFS**
 
-這三項完成後，PuffGittt 在「可靠性」與「真實世界可用性」會明顯接近 SmartGit / SourceTree，之後再投入 LFS、remote tags 與 history UX，會比較穩定。
+這三項完成後，PuffGittt 在「真實世界可用性」與「協作功能」會明顯接近 SmartGit / SourceTree，之後再投入 LFS、history UX 與 backup 保留策略，會比較穩定。

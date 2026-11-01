@@ -276,9 +276,11 @@ export interface ReflogEntry {
 }
 
 export interface UndoRecord {
+  id: string;
   operation: string;
   beforeOid: string;
   afterOid?: string;
+  backupRef?: string;
   time: string;
 }
 

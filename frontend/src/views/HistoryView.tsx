@@ -160,6 +160,11 @@ export function HistoryView({ tab }: HistoryViewProps) {
     queryKey: ["undo", root],
     queryFn: () => api.history.undoInfo(root),
   });
+  const undoHistory = useQuery({
+    queryKey: ["undo-history", root],
+    queryFn: () => api.history.undoHistory(root),
+    enabled: undoDialogOpen,
+  });
   const bisect = useQuery({
     queryKey: ["bisect", root],
     queryFn: () => api.history.bisectState(root),
@@ -323,6 +328,7 @@ export function HistoryView({ tab }: HistoryViewProps) {
     void queryClient.invalidateQueries({ queryKey: ["conflicts", root] });
     void queryClient.invalidateQueries({ queryKey: ["reflog", root] });
     void queryClient.invalidateQueries({ queryKey: ["undo", root] });
+    void queryClient.invalidateQueries({ queryKey: ["undo-history", root] });
     void queryClient.invalidateQueries({ queryKey: ["bisect", root] });
     void queryClient.invalidateQueries({ queryKey: ["diff", root] });
     void queryClient.invalidateQueries({ queryKey: ["commit", root] });
@@ -349,13 +355,17 @@ export function HistoryView({ tab }: HistoryViewProps) {
     if (ok) setResetDialogOpen(false);
   };
 
-  const handleUndo = async () => {
-    const ok = await runCommitAction(() => api.history.undo(root));
-    if (ok) setUndoDialogOpen(false);
+  const handleUndo = async (id?: string) => {
+    const ok = await runCommitAction(() => api.history.undo(root, id || undoInfo.data?.id || ""));
+    if (ok) {
+      void undoHistory.refetch();
+    }
   };
 
   const undoCommand = undoInfo.data?.beforeOid
-    ? `git reset --hard ${undoInfo.data.beforeOid}`
+    ? `git reset --hard ${undoInfo.data.beforeOid}${
+        undoInfo.data.backupRef ? `\ngit stash apply --index ${undoInfo.data.backupRef}` : ""
+      }`
     : "git reset --hard <previous-head>";
 
   const prepareCommitAction = async (action: "revert" | "drop" | "cherry-pick", meta: Omit<PendingCommitAction, "preview" | "execute">) => {
@@ -1081,17 +1091,69 @@ export function HistoryView({ tab }: HistoryViewProps) {
         </div>
       ) : null}
 
-      {undoDialogOpen && undoInfo.data?.beforeOid ? (
-        <GitCommandDialog
-          title="復原上一次操作"
-          description={`${undoInfo.data.operation}：將目前分支回復到 ${shortOid(undoInfo.data.beforeOid)}。工作區有未提交變更時無法復原。`}
-          command={undoCommand}
-          warning="復原會以 Hard Reset 回到操作前的 HEAD，未提交的變更不會被保留。"
-          destructive
-          busy={actionBusy}
-          onCancel={() => setUndoDialogOpen(false)}
-          onConfirm={() => void handleUndo()}
-        />
+      {undoDialogOpen ? (
+        <div
+          className="modal-backdrop"
+          onMouseDown={(event) => event.target === event.currentTarget && !actionBusy && setUndoDialogOpen(false)}
+        >
+          <div className="modal undo-modal" role="dialog" aria-modal="true" aria-label="復原操作">
+            <div className="modal-header">
+              <h2>復原操作</h2>
+              <Button appearance="subtle" icon={<Dismiss24Regular />} onClick={() => setUndoDialogOpen(false)} disabled={actionBusy} />
+            </div>
+            <div className="modal-body form-stack">
+              {undoInfo.data?.beforeOid ? (
+                <>
+                  <div className="undo-latest">
+                    <strong>{undoInfo.data.operation}</strong>
+                    <span>
+                      {shortOid(undoInfo.data.afterOid)} → {shortOid(undoInfo.data.beforeOid)}
+                    </span>
+                    {undoInfo.data.backupRef ? <span className="undo-backup">含工作區備份</span> : null}
+                  </div>
+                  <pre className="git-command-preview"><code>{undoCommand}</code></pre>
+                  <p className="git-command-warning destructive">
+                    復原會以 Hard Reset 回到操作前的 HEAD；若當初有工作區變更，會嘗試套用備份。
+                  </p>
+                </>
+              ) : (
+                <p className="muted">目前沒有可復原的操作。</p>
+              )}
+              <div className="undo-history">
+                <div className="undo-history-title">最近操作</div>
+                {undoHistory.isLoading ? (
+                  <div className="center-state"><Spinner label="載入中…" /></div>
+                ) : (undoHistory.data || []).length === 0 ? (
+                  <div className="empty-state">沒有復原記錄</div>
+                ) : (
+                  (undoHistory.data || []).map((record, index) => (
+                    <div className={`undo-row${index === 0 ? " latest" : ""}`} key={record.id}>
+                      <span className="undo-row-index">{index + 1}</span>
+                      <strong>{record.operation}</strong>
+                      <span className="undo-row-oid">
+                        {shortOid(record.beforeOid)} → {shortOid(record.afterOid)}
+                      </span>
+                      <span className="muted">{formatDate(record.time)}</span>
+                      {record.backupRef ? <span className="undo-backup">備份</span> : null}
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+            <div className="modal-footer">
+              <Button appearance="secondary" onClick={() => setUndoDialogOpen(false)} disabled={actionBusy}>
+                關閉
+              </Button>
+              <Button
+                appearance="primary"
+                onClick={() => void handleUndo(undoInfo.data?.id)}
+                disabled={actionBusy || !undoInfo.data?.beforeOid}
+              >
+                {actionBusy ? <Spinner size="tiny" /> : "復原最近一筆"}
+              </Button>
+            </div>
+          </div>
+        </div>
       ) : null}
 
       {pendingAction ? (

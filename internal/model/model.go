@@ -273,8 +273,10 @@ type ReflogEntry struct {
 }
 
 type UndoRecord struct {
+	ID        string `json:"id"`
 	Operation string `json:"operation"`
 	BeforeOid string `json:"beforeOid"`
 	AfterOid  string `json:"afterOid,omitempty"`
+	BackupRef string `json:"backupRef,omitempty"`
 	Time      string `json:"time"`
 }

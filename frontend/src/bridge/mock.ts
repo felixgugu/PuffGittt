@@ -365,11 +365,29 @@ export async function mockInvoke<T>(group: string, method: string, args: any[]):
       })) as ReflogEntry[] as T;
     case "HistoryAPI.UndoInfo":
       return {
+        id: "undo-demo",
         operation: "Reset (mixed)",
         beforeOid: commits[1]?.oid || repo.headOid,
         afterOid: repo.headOid,
         time: now(),
       } as UndoRecord as T;
+    case "HistoryAPI.UndoHistory":
+      return [
+        {
+          id: "undo-demo-2",
+          operation: "Drop",
+          beforeOid: commits[2]?.oid || repo.headOid,
+          afterOid: commits[1]?.oid || repo.headOid,
+          time: now(),
+        },
+        {
+          id: "undo-demo",
+          operation: "Reset (mixed)",
+          beforeOid: commits[1]?.oid || repo.headOid,
+          afterOid: repo.headOid,
+          time: now(),
+        },
+      ] as UndoRecord[] as T;
     case "HistoryAPI.Undo":
       return ok("Undo complete") as T;
     case "BranchAPI.Create":

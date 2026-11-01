@@ -77,8 +77,11 @@ This file tracks the gap between the current PuffGittt build and
 - Bisect start / good / bad / reset dialog.
 - Commits / Reflog mode switch in the History page, with reflog entry details.
 - Reflog right-click menu: create branch/tag, copy OID and reset.
-- Undo last operation for reset, revert, drop, merge and rebase, guarded by a
-  clean working tree and no in-progress operation.
+- Persisted per-repository Undo history (20 records) for reset, revert, drop,
+  merge, rebase, cherry-pick and interactive rebase.
+- Tracked worktree changes are captured with `git stash create` before
+  destructive history operations; undo resets HEAD and re-applies the backup.
+- Undo dialog lists recent operations and restores them in LIFO order.
 
 ### Branches and sync
 - Local/remote branch listing with current/upstream/merged metadata.
@@ -128,8 +131,8 @@ This file tracks the gap between the current PuffGittt build and
   gutter-level hunk actions yet.
 - **Discard**: no backup, confirmation token or restore entry yet.
 - **Reset / Revert / Drop**: basic Git commands with command previews. Undo covers
-  the most recent reset/revert/drop/merge/rebase only when the working tree is
-  clean; there is no backup retention or multi-step undo history.
+  recent history operations with tracked worktree backups, but not Discard or
+  untracked files; only the latest record can be undone at a time.
 - **Merge/rebase**: basic Git commands only; no strategy planner, expected-head
   validation or detailed conflict-aware recovery UI.
 - **Branch compare**: ahead/behind counts, unique commits and changed files are
@@ -167,7 +170,7 @@ This file tracks the gap between the current PuffGittt build and
 
 - Hunk and line staging are implemented with a structured hunk panel, not Monaco
   gutter actions.
-- Automatic backup retention and multi-step undo history.
+- Backup retention policy and backup browser.
 - Reflog selectors for refs other than HEAD and cross-ref reflog browsing.
 - Interactive rebase supports pick / squash / fixup / drop in the existing order;
   there is no drag reordering, reword or conflict Skip action.

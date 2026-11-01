@@ -27,7 +27,8 @@ type Service struct {
 	mu       sync.RWMutex
 	locks    sync.Map
 	undoMu   sync.Mutex
-	undo     map[string]model.UndoRecord
+	undo     map[string][]model.UndoRecord
+	undoFile string
 	watchMu  sync.Mutex
 	watchers map[string]*repoMonitor
 	emitMu   sync.Mutex
@@ -36,13 +37,18 @@ type Service struct {
 }
 
 func New(cfg *config.Config) *Service {
-	return &Service{
+	service := &Service{
 		cfg:      cfg,
 		runner:   git.NewRunner(),
-		undo:     map[string]model.UndoRecord{},
+		undo:     map[string][]model.UndoRecord{},
 		watchers: map[string]*repoMonitor{},
 		tasks:    task.NewManager(),
 	}
+	if strings.TrimSpace(cfg.BackupDir) != "" {
+		service.undoFile = filepath.Join(cfg.BackupDir, "undo.json")
+		service.loadUndoFile()
+	}
+	return service
 }
 
 func (s *Service) SetContext(ctx context.Context) { s.ctx = ctx }
@@ -78,62 +84,141 @@ func (s *Service) headOid(root string) string {
 }
 
 func (s *Service) recordUndo(root, operation, beforeOid string) {
-	if strings.TrimSpace(beforeOid) == "" {
+	s.recordUndoWithBackup(root, operation, beforeOid, "")
+}
+
+func (s *Service) recordUndoWithBackup(root, operation, beforeOid, backupRef string) {
+	beforeOid = strings.TrimSpace(beforeOid)
+	if beforeOid == "" {
 		return
 	}
 	afterOid := s.headOid(root)
-	if afterOid == "" || afterOid == beforeOid {
+	if afterOid == "" {
 		return
 	}
-	s.undoMu.Lock()
-	defer s.undoMu.Unlock()
-	s.undo[undoKey(root)] = model.UndoRecord{
+	if afterOid == beforeOid && strings.TrimSpace(backupRef) == "" {
+		return
+	}
+	record := model.UndoRecord{
+		ID:        nextUndoID(),
 		Operation: operation,
 		BeforeOid: beforeOid,
 		AfterOid:  afterOid,
+		BackupRef: strings.TrimSpace(backupRef),
 		Time:      time.Now().Format(time.RFC3339),
 	}
+	key := undoKey(root)
+	s.undoMu.Lock()
+	records := append(s.undo[key], record)
+	if len(records) > 20 {
+		records = records[len(records)-20:]
+	}
+	s.undo[key] = records
+	s.persistUndoLocked()
+	s.undoMu.Unlock()
 }
 
 func (s *Service) UndoInfo(root string) model.UndoRecord {
 	s.undoMu.Lock()
 	defer s.undoMu.Unlock()
-	return s.undo[undoKey(root)]
+	records := s.undo[undoKey(root)]
+	if len(records) == 0 {
+		return model.UndoRecord{}
+	}
+	return records[len(records)-1]
 }
 
-func (s *Service) Undo(root string) (model.OperationResult, error) {
-	record := s.UndoInfo(root)
-	if strings.TrimSpace(record.BeforeOid) == "" {
+func (s *Service) UndoHistory(root string) []model.UndoRecord {
+	s.undoMu.Lock()
+	defer s.undoMu.Unlock()
+	records := s.undo[undoKey(root)]
+	result := make([]model.UndoRecord, 0, len(records))
+	for index := len(records) - 1; index >= 0; index-- {
+		result = append(result, records[index])
+	}
+	return result
+}
+
+func (s *Service) Undo(root, id string) (model.OperationResult, error) {
+	key := undoKey(root)
+	s.undoMu.Lock()
+	records := s.undo[key]
+	if len(records) == 0 {
+		s.undoMu.Unlock()
 		return model.OperationResult{}, fmt.Errorf("沒有可復原的操作")
 	}
-	runner := s.runnerWithSettings()
-	status, err := runner.Status(s.context(), root)
-	if err != nil {
-		return model.OperationResult{}, err
+	record := records[len(records)-1]
+	if strings.TrimSpace(id) != "" && id != record.ID {
+		s.undoMu.Unlock()
+		return model.OperationResult{}, fmt.Errorf("只能依序復原最近一筆操作")
 	}
-	if status.Repo.Operation != "normal" {
-		return model.OperationResult{}, fmt.Errorf("有進行中的 Git 操作，無法復原")
-	}
-	if head := s.headOid(root); head == "" || head != record.AfterOid {
-		return model.OperationResult{}, fmt.Errorf("目前 HEAD 已改變，無法復原上一次操作")
-	}
-	for _, file := range status.Files {
-		if file.IndexStatus == "?" {
-			continue
-		}
-		if file.IndexStatus != "." || file.WorktreeStatus != "." {
-			return model.OperationResult{}, fmt.Errorf("工作區必須乾淨才能復原")
-		}
-	}
-	result, err := runner.ResetCommit(s.context(), root, record.BeforeOid, "hard")
-	if err != nil {
-		return model.OperationResult{}, err
-	}
-	s.undoMu.Lock()
-	delete(s.undo, undoKey(root))
 	s.undoMu.Unlock()
+
+	runner := s.runnerWithSettings()
+	result := model.OperationResult{Success: true}
+	worktreeOnly := record.BeforeOid != "" && record.BeforeOid == record.AfterOid
+	if !worktreeOnly {
+		status, err := runner.Status(s.context(), root)
+		if err != nil {
+			return model.OperationResult{}, err
+		}
+		if status.Repo.Operation != "normal" {
+			return model.OperationResult{}, fmt.Errorf("有進行中的 Git 操作，無法復原")
+		}
+		if head := s.headOid(root); head == "" || head != record.AfterOid {
+			return model.OperationResult{}, fmt.Errorf("目前 HEAD 已改變，無法復原上一次操作")
+		}
+		if record.BackupRef == "" {
+			for _, file := range status.Files {
+				if file.IndexStatus == "?" {
+					continue
+				}
+				if file.IndexStatus != "." || file.WorktreeStatus != "." {
+					return model.OperationResult{}, fmt.Errorf("工作區必須乾淨才能復原")
+				}
+			}
+		}
+		reset, err := runner.ResetCommit(s.context(), root, record.BeforeOid, "hard")
+		if err != nil {
+			return model.OperationResult{}, err
+		}
+		result = reset
+	}
+
+	if record.BackupRef != "" {
+		backup, err := runner.ApplyBackup(s.context(), root, record.BackupRef)
+		if err != nil {
+			s.popUndo(key, record.ID)
+			return backup, fmt.Errorf("HEAD 已復原，但工作區備份套用失敗：%w", err)
+		}
+		result = backup
+	}
+
+	s.popUndo(key, record.ID)
+	result.Success = true
 	result.Message = "已復原上一次操作"
+	if record.BackupRef != "" {
+		result.Message += "，並還原工作區備份"
+	}
 	return result, nil
+}
+
+func (s *Service) popUndo(key, id string) {
+	s.undoMu.Lock()
+	defer s.undoMu.Unlock()
+	records := s.undo[key]
+	if len(records) == 0 {
+		return
+	}
+	if records[len(records)-1].ID == id {
+		records = records[:len(records)-1]
+	}
+	if len(records) == 0 {
+		delete(s.undo, key)
+	} else {
+		s.undo[key] = records
+	}
+	s.persistUndoLocked()
 }
 
 type AppAPI struct{ s *Service }
@@ -487,10 +572,15 @@ func (a *HistoryAPI) Reset(root, oid, mode string) (model.OperationResult, error
 	mu := a.s.repoLock(root)
 	mu.Lock()
 	defer mu.Unlock()
+	runner := a.s.runnerWithSettings()
 	before := a.s.headOid(root)
-	result, err := a.s.runnerWithSettings().ResetCommit(a.s.context(), root, oid, mode)
+	backup, err := runner.BackupWorktree(a.s.context(), root)
+	if err != nil {
+		return model.OperationResult{}, fmt.Errorf("無法建立工作區備份：%w", err)
+	}
+	result, err := runner.ResetCommit(a.s.context(), root, oid, mode)
 	if err == nil {
-		a.s.recordUndo(root, "Reset ("+mode+")", before)
+		a.s.recordUndoWithBackup(root, "Reset ("+mode+")", before, backup)
 	}
 	return result, err
 }
@@ -499,10 +589,15 @@ func (a *HistoryAPI) Revert(root, oid string) (model.OperationResult, error) {
 	mu := a.s.repoLock(root)
 	mu.Lock()
 	defer mu.Unlock()
+	runner := a.s.runnerWithSettings()
 	before := a.s.headOid(root)
-	result, err := a.s.runnerWithSettings().RevertCommit(a.s.context(), root, oid)
+	backup, err := runner.BackupWorktree(a.s.context(), root)
+	if err != nil {
+		return model.OperationResult{}, fmt.Errorf("無法建立工作區備份：%w", err)
+	}
+	result, err := runner.RevertCommit(a.s.context(), root, oid)
 	if err == nil {
-		a.s.recordUndo(root, "Revert", before)
+		a.s.recordUndoWithBackup(root, "Revert", before, backup)
 	}
 	return result, err
 }
@@ -511,10 +606,15 @@ func (a *HistoryAPI) Drop(root, oid string) (model.OperationResult, error) {
 	mu := a.s.repoLock(root)
 	mu.Lock()
 	defer mu.Unlock()
+	runner := a.s.runnerWithSettings()
 	before := a.s.headOid(root)
-	result, err := a.s.runnerWithSettings().DropCommit(a.s.context(), root, oid)
+	backup, backupErr := runner.BackupWorktree(a.s.context(), root)
+	if backupErr != nil {
+		return model.OperationResult{}, fmt.Errorf("無法建立工作區備份：%w", backupErr)
+	}
+	result, err := runner.DropCommit(a.s.context(), root, oid)
 	if err == nil {
-		a.s.recordUndo(root, "Drop", before)
+		a.s.recordUndoWithBackup(root, "Drop", before, backup)
 	}
 	return result, err
 }
@@ -536,10 +636,15 @@ func (a *HistoryAPI) InteractiveRebase(root, base string, todos []model.RebaseTo
 		mu := a.s.repoLock(root)
 		mu.Lock()
 		defer mu.Unlock()
+		runner := a.s.runnerWithSettings()
 		before := a.s.headOid(root)
-		result, err := a.s.runnerWithSettings().InteractiveRebase(ctx, root, base, todos)
+		backup, backupErr := runner.BackupWorktree(ctx, root)
+		if backupErr != nil {
+			return model.OperationResult{}, fmt.Errorf("無法建立工作區備份：%w", backupErr)
+		}
+		result, err := runner.InteractiveRebase(ctx, root, base, todos)
 		if err == nil {
-			a.s.recordUndo(root, "Interactive rebase", before)
+			a.s.recordUndoWithBackup(root, "Interactive rebase", before, backup)
 		}
 		return result, err
 	})
@@ -574,10 +679,15 @@ func (a *HistoryAPI) CherryPick(root, oid, mainline string) (model.OperationResu
 	mu := a.s.repoLock(root)
 	mu.Lock()
 	defer mu.Unlock()
+	runner := a.s.runnerWithSettings()
 	before := a.s.headOid(root)
-	result, err := a.s.runnerWithSettings().CherryPickCommit(a.s.context(), root, oid, mainline)
+	backup, err := runner.BackupWorktree(a.s.context(), root)
+	if err != nil {
+		return model.OperationResult{}, fmt.Errorf("無法建立工作區備份：%w", err)
+	}
+	result, err := runner.CherryPickCommit(a.s.context(), root, oid, mainline)
 	if err == nil {
-		a.s.recordUndo(root, "Cherry-pick", before)
+		a.s.recordUndoWithBackup(root, "Cherry-pick", before, backup)
 	}
 	return result, err
 }
@@ -590,11 +700,15 @@ func (a *HistoryAPI) UndoInfo(root string) model.UndoRecord {
 	return a.s.UndoInfo(root)
 }
 
-func (a *HistoryAPI) Undo(root string) (model.OperationResult, error) {
+func (a *HistoryAPI) UndoHistory(root string) []model.UndoRecord {
+	return a.s.UndoHistory(root)
+}
+
+func (a *HistoryAPI) Undo(root, id string) (model.OperationResult, error) {
 	mu := a.s.repoLock(root)
 	mu.Lock()
 	defer mu.Unlock()
-	return a.s.Undo(root)
+	return a.s.Undo(root, id)
 }
 
 func (a *BranchAPI) List(root string) ([]model.Branch, error) {
@@ -648,10 +762,15 @@ func (a *BranchAPI) Merge(root, source, strategy string) (model.OperationResult,
 		mu := a.s.repoLock(root)
 		mu.Lock()
 		defer mu.Unlock()
+		runner := a.s.runnerWithSettings()
 		before := a.s.headOid(root)
-		result, err := a.s.runnerWithSettings().Merge(ctx, root, source, strategy)
+		backup, backupErr := runner.BackupWorktree(ctx, root)
+		if backupErr != nil {
+			return model.OperationResult{}, fmt.Errorf("無法建立工作區備份：%w", backupErr)
+		}
+		result, err := runner.Merge(ctx, root, source, strategy)
 		if err == nil {
-			a.s.recordUndo(root, "Merge", before)
+			a.s.recordUndoWithBackup(root, "Merge", before, backup)
 		}
 		return result, err
 	})
@@ -662,10 +781,15 @@ func (a *BranchAPI) Rebase(root, onto string) (model.OperationResult, error) {
 		mu := a.s.repoLock(root)
 		mu.Lock()
 		defer mu.Unlock()
+		runner := a.s.runnerWithSettings()
 		before := a.s.headOid(root)
-		result, err := a.s.runnerWithSettings().Rebase(ctx, root, onto)
+		backup, backupErr := runner.BackupWorktree(ctx, root)
+		if backupErr != nil {
+			return model.OperationResult{}, fmt.Errorf("無法建立工作區備份：%w", backupErr)
+		}
+		result, err := runner.Rebase(ctx, root, onto)
 		if err == nil {
-			a.s.recordUndo(root, "Rebase", before)
+			a.s.recordUndoWithBackup(root, "Rebase", before, backup)
 		}
 		return result, err
 	})

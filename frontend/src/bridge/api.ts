@@ -146,7 +146,8 @@ export const api = {
     reflog: (root: string, limit: number) =>
       invoke<ReflogEntry[]>("HistoryAPI", "Reflog", root, limit),
     undoInfo: (root: string) => invoke<UndoRecord>("HistoryAPI", "UndoInfo", root),
-    undo: (root: string) => invoke<OperationResult>("HistoryAPI", "Undo", root),
+    undoHistory: (root: string) => invoke<UndoRecord[]>("HistoryAPI", "UndoHistory", root),
+    undo: (root: string, id: string) => invoke<OperationResult>("HistoryAPI", "Undo", root, id),
   },
   branch: {
     list: (root: string) => invoke<Branch[]>("BranchAPI", "List", root),

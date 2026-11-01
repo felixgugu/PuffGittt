@@ -59,6 +59,8 @@ wails build
   dialog, create branch/tag, copy OID, reset, revert, drop commit, cherry-pick
   (including merge mainline selection), interactive rebase and bisect, all through
   a right-click context menu or History toolbar with Git command previews.
+- Persisted multi-step Undo history with tracked worktree backups for destructive
+  history operations.
 - Branches: local and remote lists, create, switch, merge, rebase, rename, delete,
   set upstream, publish, checkout remote branch, delete remote branch and branch
   comparison through right-click context menus, with merge/rebase direction labels
@@ -96,7 +98,7 @@ Highlights:
 - Remote tag management and signed tags.
 - Terminal/ConPTY, Git Flow, provider integrations and custom actions.
 - High-contrast theme.
-- Backup retention, diagnostics export, installer, code signing and updater.
+- Backup retention and backup browser, diagnostics export, installer, code signing and updater.
 
 ## Project layout
 
