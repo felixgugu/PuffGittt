@@ -93,6 +93,8 @@ export const api = {
   },
   repo: {
     getStatus: (root: string) => invoke<Status>("RepoAPI", "GetStatus", root),
+    getWorkspaceStatus: (root: string) =>
+      invoke<WorkspaceRepository>("RepoAPI", "GetWorkspaceStatus", root),
     getBranches: (root: string) => invoke<Branch[]>("RepoAPI", "GetBranches", root),
     getRemotes: (root: string) => invoke<Remote[]>("RepoAPI", "GetRemotes", root),
     getSubmodules: (root: string) => invoke<Submodule[]>("RepoAPI", "GetSubmodules", root),

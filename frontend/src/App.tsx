@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from "react";
 import { FluentProvider, Spinner } from "@fluentui/react-components";
 import { useTranslation } from "react-i18next";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import i18n from "./i18n";
 import { api, setNativeTheme } from "./bridge/api";
 import { useActiveTab, useAppStore, type ThemeMode, type ViewKey } from "./store";
@@ -88,13 +88,36 @@ export default function App() {
   });
   const status = statusQuery.data;
 
-  const openBranches = useMemo(() => {
-    const map: Record<string, string> = {};
-    tabs.forEach((tab) => {
-      map[tab.repo.rootPath.replace(/\\/g, "/").toLowerCase()] = tab.repo.branch || "";
+  const backgroundTabs = useMemo(
+    () => tabs.filter((tab) => !root || tab.repo.rootPath !== root),
+    [tabs, root],
+  );
+  const backgroundStatus = useQueries({
+    queries: backgroundTabs.map((tab) => ({
+      queryKey: ["workspace-status", tab.repo.rootPath],
+      queryFn: () => api.repo.getWorkspaceStatus(tab.repo.rootPath),
+      enabled: !!tab.repo.rootPath,
+      refetchInterval: 10_000,
+    })),
+  });
+
+  const openRepositories = useMemo(() => {
+    const map: Record<string, { branch: string; changes: number }> = {};
+    if (root) {
+      map[root.replace(/\\/g, "/").toLowerCase()] = {
+        branch: status?.repo.branch || "",
+        changes: status?.files.length || 0,
+      };
+    }
+    backgroundTabs.forEach((tab, index) => {
+      const data = backgroundStatus[index]?.data;
+      map[tab.repo.rootPath.replace(/\\/g, "/").toLowerCase()] = {
+        branch: data?.branch || tab.repo.branch || "",
+        changes: data?.changes || 0,
+      };
     });
     return map;
-  }, [tabs]);
+  }, [backgroundStatus, backgroundTabs, root, status]);
 
   useEffect(() => {
     api.app.getSettings().then((loaded) => {
@@ -332,7 +355,7 @@ export default function App() {
             collapsed={sidebarCollapsed}
             branch={status?.repo.branch || activeTab?.repo.branch || ""}
             repositories={workspaceQuery.data || []}
-            openBranches={openBranches}
+            openRepositories={openRepositories}
             changeCount={status?.files.length || 0}
             hasConflicts={!!status?.files.some((file) => file.kind === "conflicted")}
             onToggle={() => setSidebarCollapsed(!sidebarCollapsed)}

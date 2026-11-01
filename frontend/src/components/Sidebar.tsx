@@ -21,7 +21,7 @@ interface SidebarProps {
   collapsed: boolean;
   branch?: string;
   repositories: WorkspaceRepository[];
-  openBranches: Record<string, string>;
+  openRepositories: Record<string, { branch: string; changes: number }>;
   changeCount?: number;
   hasConflicts?: boolean;
   onToggle: () => void;
@@ -46,7 +46,7 @@ export function Sidebar({
   collapsed,
   branch = "",
   repositories,
-  openBranches,
+  openRepositories,
   changeCount = 0,
   hasConflicts = false,
   onToggle,
@@ -166,9 +166,12 @@ export function Sidebar({
               {repoItems.map((repo) => {
                 const key = repo.path.replace(/\\/g, "/").toLowerCase();
                 const isActive = !!activeTab && activeTab.repo.rootPath.replace(/\\/g, "/").toLowerCase() === key;
-                const isOpen = Object.prototype.hasOwnProperty.call(openBranches, key);
-                const displayBranch = isActive ? branch : openBranches[key] || "";
-                const displayChanges = isActive ? changeCount : 0;
+                const meta = isActive
+                  ? { branch, changes: changeCount }
+                  : openRepositories[key];
+                const isOpen = !!meta;
+                const displayBranch = meta?.branch || "";
+                const displayChanges = meta?.changes ?? 0;
                 return (
                   <button
                     key={repo.path}

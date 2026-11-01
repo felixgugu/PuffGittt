@@ -240,6 +240,14 @@ export async function mockInvoke<T>(group: string, method: string, args: any[]):
       return settings.recent as T;
     case "AppAPI.ListWorkspaceRepositories":
       return workspaceRepos.map((entry) => ({ ...entry })) as T;
+    case "RepoAPI.GetWorkspaceStatus":
+      return {
+        name: repo.name,
+        path: repo.rootPath,
+        branch: repo.branch || "main",
+        changes: files.length,
+        kind: "project",
+      } as WorkspaceRepository as T;
     case "AppAPI.PickFolder":
       return repo.rootPath as T;
     case "AppAPI.OpenRepository":

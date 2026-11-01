@@ -389,6 +389,10 @@ func (a *RepoAPI) GetStatus(root string) (model.Status, error) {
 	return a.s.runnerWithSettings().Status(a.s.context(), root)
 }
 
+func (a *RepoAPI) GetWorkspaceStatus(root string) (model.WorkspaceRepository, bool) {
+	return a.s.runnerWithSettings().WorkspaceStatus(a.s.context(), root)
+}
+
 func (a *RepoAPI) GetBranches(root string) ([]model.Branch, error) {
 	return a.s.runnerWithSettings().Branches(a.s.context(), root)
 }
