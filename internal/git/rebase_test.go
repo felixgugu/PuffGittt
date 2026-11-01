@@ -108,6 +108,39 @@ func TestInteractiveRebaseRewordAndReorder(t *testing.T) {
 	}
 }
 
+func TestInteractiveRebaseRewordThenSquash(t *testing.T) {
+	runner, dir := setupRepo(t)
+	ctx := context.Background()
+	base := commitTestFile(t, runner, dir, "a.txt", "A")
+	commitTestFile(t, runner, dir, "b.txt", "B")
+	commitTestFile(t, runner, dir, "c.txt", "C")
+
+	plan, err := runner.RebasePlan(ctx, dir, base)
+	if err != nil {
+		t.Fatal(err)
+	}
+	plan[0].Action = "reword"
+	plan[0].Message = "B reworded"
+	plan[1].Action = "squash"
+	if _, err := runner.InteractiveRebase(ctx, dir, base, plan); err != nil {
+		t.Fatal(err)
+	}
+	count, err := runner.Run(ctx, dir, "rev-list", "--count", base+"..HEAD")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.TrimSpace(count) != "1" {
+		t.Fatalf("count = %q", count)
+	}
+	subject, err := runner.Run(ctx, dir, "log", "-1", "--format=%s")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(subject, "B reworded") {
+		t.Fatalf("subject = %q", subject)
+	}
+}
+
 func TestInteractiveRebaseEditPauses(t *testing.T) {
 	runner, dir := setupRepo(t)
 	ctx := context.Background()
