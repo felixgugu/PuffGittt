@@ -186,7 +186,6 @@ func (a *AppAPI) RemoveRecent(path string) error {
 
 func (a *AppAPI) ListWorkspaceRepositories() []model.WorkspaceRepository {
 	settings := a.s.cfg.LoadSettings()
-	runner := a.s.runnerWithSettings()
 	hidden := map[string]bool{}
 	for _, path := range settings.HiddenProjects {
 		hidden[workspacePathKey(path)] = true
@@ -199,21 +198,20 @@ func (a *AppAPI) ListWorkspaceRepositories() []model.WorkspaceRepository {
 	candidates := []candidate{}
 	seen := map[string]bool{}
 	addCandidate := func(path, kind string) {
-		if strings.TrimSpace(path) == "" {
+		if !looksLikeRepository(path) {
 			return
 		}
-		key := workspacePathKey(path)
+		clean := filepath.Clean(path)
+		key := workspacePathKey(clean)
 		if seen[key] || hidden[key] {
 			return
 		}
 		seen[key] = true
-		candidates = append(candidates, candidate{path: path, kind: kind})
+		candidates = append(candidates, candidate{path: clean, kind: kind})
 	}
 
 	if strings.TrimSpace(settings.ProjectsRoot) != "" {
-		if looksLikeRepository(settings.ProjectsRoot) {
-			addCandidate(settings.ProjectsRoot, "project")
-		}
+		addCandidate(settings.ProjectsRoot, "project")
 		if entries, err := os.ReadDir(settings.ProjectsRoot); err == nil {
 			for _, entry := range entries {
 				if !entry.IsDir() {
@@ -223,10 +221,7 @@ func (a *AppAPI) ListWorkspaceRepositories() []model.WorkspaceRepository {
 				if strings.HasPrefix(name, ".") || name == "node_modules" {
 					continue
 				}
-				path := filepath.Join(settings.ProjectsRoot, name)
-				if looksLikeRepository(path) {
-					addCandidate(path, "project")
-				}
+				addCandidate(filepath.Join(settings.ProjectsRoot, name), "project")
 			}
 		}
 	}
@@ -237,38 +232,13 @@ func (a *AppAPI) ListWorkspaceRepositories() []model.WorkspaceRepository {
 		addCandidate(recent.Path, "recent")
 	}
 
-	results := make([]model.WorkspaceRepository, len(candidates))
-	valid := make([]bool, len(candidates))
-	workers := 4
-	if len(candidates) < workers {
-		workers = len(candidates)
-	}
-	if workers > 0 {
-		sem := make(chan struct{}, workers)
-		var wg sync.WaitGroup
-		for index, entry := range candidates {
-			wg.Add(1)
-			go func(index int, entry candidate) {
-				defer wg.Done()
-				sem <- struct{}{}
-				defer func() { <-sem }()
-				repo, ok := runner.WorkspaceStatus(a.s.context(), entry.path)
-				if !ok {
-					return
-				}
-				repo.Kind = entry.kind
-				results[index] = repo
-				valid[index] = true
-			}(index, entry)
-		}
-		wg.Wait()
-	}
-
 	result := make([]model.WorkspaceRepository, 0, len(candidates))
-	for index := range results {
-		if valid[index] {
-			result = append(result, results[index])
-		}
+	for _, entry := range candidates {
+		result = append(result, model.WorkspaceRepository{
+			Name: filepath.Base(entry.path),
+			Path: filepath.ToSlash(entry.path),
+			Kind: entry.kind,
+		})
 	}
 	rank := func(kind string) int {
 		switch kind {

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from "react";
 import { FluentProvider, Spinner } from "@fluentui/react-components";
 import { useTranslation } from "react-i18next";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -87,6 +87,14 @@ export default function App() {
     refetchInterval: 30_000,
   });
   const status = statusQuery.data;
+
+  const openBranches = useMemo(() => {
+    const map: Record<string, string> = {};
+    tabs.forEach((tab) => {
+      map[tab.repo.rootPath.replace(/\\/g, "/").toLowerCase()] = tab.repo.branch || "";
+    });
+    return map;
+  }, [tabs]);
 
   useEffect(() => {
     api.app.getSettings().then((loaded) => {
@@ -324,6 +332,7 @@ export default function App() {
             collapsed={sidebarCollapsed}
             branch={status?.repo.branch || activeTab?.repo.branch || ""}
             repositories={workspaceQuery.data || []}
+            openBranches={openBranches}
             changeCount={status?.files.length || 0}
             hasConflicts={!!status?.files.some((file) => file.kind === "conflicted")}
             onToggle={() => setSidebarCollapsed(!sidebarCollapsed)}

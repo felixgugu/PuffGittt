@@ -16,7 +16,9 @@ This file tracks the gap between the current PuffGittt build and
 - Collapsible, resizable sidebar (240 px expanded / 72 px collapsed) with
   persisted state.
 - Sidebar workspace list built from the projects folder and recently opened
-  repositories, deduplicated and enriched with branch and change counts.
+  repositories, deduplicated and sorted. Listing uses filesystem metadata only;
+  branch and change counts are read for open tabs, so unopened repositories do
+  not spawn Git processes.
 - Add repository folders to the sidebar and remove entries without deleting files.
 - Merged project/recent list with a draggable section resizer and persisted height.
 - Windows icon generated from `appicon.png`; brand art removed from main screens.

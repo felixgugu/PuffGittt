@@ -48,7 +48,7 @@ PuffGittt 目前已經從「可用的 Git 前端」進展到可以支撐日常�
 | 多 repository tabs | 完成 | 可同時開啟多個 repo |
 | Welcome / Open / Clone / Init | 完成 | 最近開啟與 projects folder |
 | 記住上次 repo 與頁面 | 完成 | 啟動自動恢復 |
-| Sidebar 專案清單 | 完成 | 可拖曳高度、顯示 branch / 變更數 |
+| Sidebar 專案清單 | 完成 | 可拖曳高度；branch / 變更數只對開啟中的專案讀取 |
 | Light / Dark theme | 完成 | 跟隨系統或手動切換 |
 | 高對比主題 | 未實作 | 尚無 high-contrast token |
 | 多視窗 | 未實作 | 目前以 tabs 為主 |

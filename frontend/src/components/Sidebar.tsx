@@ -21,6 +21,7 @@ interface SidebarProps {
   collapsed: boolean;
   branch?: string;
   repositories: WorkspaceRepository[];
+  openBranches: Record<string, string>;
   changeCount?: number;
   hasConflicts?: boolean;
   onToggle: () => void;
@@ -45,6 +46,7 @@ export function Sidebar({
   collapsed,
   branch = "",
   repositories,
+  openBranches,
   changeCount = 0,
   hasConflicts = false,
   onToggle,
@@ -161,25 +163,32 @@ export function Sidebar({
               <span>數量</span>
             </div>
             <div className="repo-list">
-              {repoItems.map((repo) => (
-                <button
-                  key={repo.path}
-                  type="button"
-                  className={`repo-list-item${activeTab?.repo.rootPath === repo.path ? " active" : ""}`}
-                  title={repo.path}
-                  onClick={() => onOpenRepository(repo.path)}
-                  onContextMenu={(event) => {
-                    event.preventDefault();
-                    setRepoMenu({ x: event.clientX, y: event.clientY, repo });
-                  }}
-                >
-                  <span className="repo-list-name">{repo.name}</span>
-                  <span className="repo-list-branch">{repo.branch || "-"}</span>
-                  <span className={`repo-list-changes${repo.changes > 0 ? "" : " empty"}`}>
-                    {repo.changes > 0 ? repo.changes : "–"}
-                  </span>
-                </button>
-              ))}
+              {repoItems.map((repo) => {
+                const key = repo.path.replace(/\\/g, "/").toLowerCase();
+                const isActive = !!activeTab && activeTab.repo.rootPath.replace(/\\/g, "/").toLowerCase() === key;
+                const isOpen = Object.prototype.hasOwnProperty.call(openBranches, key);
+                const displayBranch = isActive ? branch : openBranches[key] || "";
+                const displayChanges = isActive ? changeCount : 0;
+                return (
+                  <button
+                    key={repo.path}
+                    type="button"
+                    className={`repo-list-item${isActive ? " active" : ""}${isOpen ? " open" : ""}`}
+                    title={repo.path}
+                    onClick={() => onOpenRepository(repo.path)}
+                    onContextMenu={(event) => {
+                      event.preventDefault();
+                      setRepoMenu({ x: event.clientX, y: event.clientY, repo });
+                    }}
+                  >
+                    <span className="repo-list-name">{repo.name}</span>
+                    <span className="repo-list-branch">{displayBranch || "-"}</span>
+                    <span className={`repo-list-changes${displayChanges > 0 ? "" : " empty"}`}>
+                      {displayChanges > 0 ? displayChanges : "–"}
+                    </span>
+                  </button>
+                );
+              })}
               {repoItems.length === 0 ? <div className="repo-list-empty">{t("sidebar.noRepos")}</div> : null}
             </div>
           </div>

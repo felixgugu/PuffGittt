@@ -130,7 +130,10 @@ func TestListWorkspaceRepositories(t *testing.T) {
 	if len(repos) != 1 {
 		t.Fatalf("expected deduplicated repository list, got %#v", repos)
 	}
-	if repos[0].Name != "alpha" || repos[0].Kind != "project" || repos[0].Changes != 1 {
+	if repos[0].Name != "alpha" || repos[0].Kind != "project" {
 		t.Fatalf("repository = %#v", repos[0])
+	}
+	if repos[0].Branch != "" || repos[0].Changes != 0 {
+		t.Fatalf("unopened repository should not run git: %#v", repos[0])
 	}
 }
